@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Com suporte a botões interativos (opção 3)
+  Menu em texto estável + comandos
 */
 const fs = require('fs')
 const path = require('path')
@@ -8,7 +8,6 @@ const colors = require('colors')
 const ffmpeg = require('fluent-ffmpeg')
 const webp = require('node-webpmux')
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
-const { sendButtonMenu, sendQuickButtons } = require('./arquivos/js/buttons.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -90,9 +89,14 @@ function styleText(text, style) {
 async function main() {
   console.log(colors.cyan('🌸 Iniciando Nawty Bot...'))
   nawty = await startConnection(null, config)
-  if (!nawty) return
+  if (!nawty) {
+    console.log(colors.red('Falha na conexão'))
+    return
+  }
 
-  nawty.ev.on('messages.upsert', async ({ messages }) => {
+  console.log(colors.green('Socket pronto, registrando listener de mensagens...'))
+
+  nawty.ev.on('messages.upsert', async ({ messages, type }) => {
     try {
       const msg = messages[0]
       if (!msg?.message) return
@@ -101,7 +105,6 @@ async function main() {
       const sender = msg.key.participant || from
       const pushname = msg.pushName || 'Usuário'
 
-      // Captura também resposta de lista/botão
       let body =
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text ||
@@ -111,7 +114,7 @@ async function main() {
         msg.message.buttonsResponseMessage?.selectedButtonId ||
         ''
 
-      // Resposta de interactive / nativeFlow
+      // nativeFlow response
       try {
         const native = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage
         if (native?.paramsJson) {
@@ -122,49 +125,71 @@ async function main() {
 
       if (!body) return
 
+      console.log(colors.yellow(`[MSG] ${body} | de: ${sender}`))
+
       const isCmd = body.startsWith(prefix)
-      const command = isCmd ? body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase() : body.toLowerCase().replace(prefix, '')
+      if (!isCmd) return
+
+      const command = body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase()
       const args = body.trim().split(/ +/).slice(1)
       const q = args.join(' ')
 
-      const reply = (t) => nawty.sendMessage(from, { text: t }, { quoted: msg })
-      const reagir = (e) => nawty.sendMessage(from, { react: { text: e, key: msg.key } })
+      console.log(colors.cyan(`[CMD] ${command}`))
 
-      // ========== MENU COM BOTÕES ==========
+      const reply = async (t) => {
+        try {
+          await nawty.sendMessage(from, { text: t }, { quoted: msg })
+        } catch (e) {
+          console.error('Erro no reply:', e.message)
+        }
+      }
+      const reagir = async (e) => {
+        try {
+          await nawty.sendMessage(from, { react: { text: e, key: msg.key } })
+        } catch {}
+      }
+
+      // ========== MENU (TEXTO PURO - ESTÁVEL) ==========
       if (['menu','help','ajuda'].includes(command)) {
-        const sections = [{
-          title: 'Comandos Principais',
-          rows: [
-            { title: '🎨 Criar Figurinha', description: 'Responda uma imagem/vídeo', id: `${prefix}s` },
-            { title: '🖼️ Sticker → Imagem', description: 'Converte figurinha', id: `${prefix}toimg` },
-            { title: '✨ Estilos de Texto', description: 'Gera nicks estilizados', id: `${prefix}nick` },
-            { title: '🧮 Calculadora', description: 'Faça contas', id: `${prefix}calc` },
-            { title: '🎲 Dado', description: 'Rola um dado', id: `${prefix}dado` },
-            { title: '🏓 Ping', description: 'Teste de velocidade', id: `${prefix}ping` },
-            { title: '👑 Dono', description: 'Informações do dono', id: `${prefix}dono` },
-            { title: 'ℹ️ Info', description: 'Sobre o bot', id: `${prefix}info` }
-          ]
-        }, {
-          title: 'Diversão',
-          rows: [
-            { title: '🏳️‍🌈 Gay', description: 'Porcentagem aleatória', id: `${prefix}gay` },
-            { title: '💘 Ship', description: 'Compatibilidade', id: `${prefix}ship` },
-            { title: '🎯 Chance', description: 'Chance de algo', id: `${prefix}chance` },
-            { title: '🪙 Cara ou Coroa', description: 'Joga a moeda', id: `${prefix}cara` }
-          ]
-        }]
+        const menu = `╭🌸───────────────🌸╮
+       *NAWTY BOT*
+╰🌸───────────────🌸╯
 
-        await sendButtonMenu(nawty, from, {
-          title: '🌸 NAWTY BOT',
-          text: `Olá *${pushname}*!\nEscolha uma opção no menu abaixo:`,
-          footer: 'Nawty Bot • Baileys 7',
-          sections,
-          quoted: msg
-        })
+👤 ${pushname}
+🔰 Prefixo: *${prefix}*
+
+╭─『 FIGURINHAS 』
+│ ${prefix}s / ${prefix}sticker
+│ ${prefix}toimg
+╰──────────────
+
+╭─『 TEXTO 』
+│ ${prefix}nick <texto>
+│ ${prefix}say <texto>
+╰──────────────
+
+╭─『 DIVERSÃO 』
+│ ${prefix}gay
+│ ${prefix}ship
+│ ${prefix}chance <texto>
+│ ${prefix}dado
+│ ${prefix}cara
+╰──────────────
+
+╭─『 UTILS 』
+│ ${prefix}ping
+│ ${prefix}calc 2+2
+│ ${prefix}pp
+│ ${prefix}info
+│ ${prefix}dono
+╰──────────────`
+
+        await reply(menu)
+        return
       }
 
       // ========== STICKER ==========
-      else if (['s','sticker','f','fig','figurinha'].includes(command)) {
+      if (['s','sticker','f','fig','figurinha'].includes(command)) {
         try {
           await reagir('⏳')
           let media=null, isVideo=false
@@ -175,7 +200,10 @@ async function main() {
           else if (msg.message.imageMessage) { media=msg.message.imageMessage; isVideo=false }
           else if (msg.message.videoMessage) { media=msg.message.videoMessage; isVideo=true }
 
-          if (!media) return reply(`❌ Responda uma imagem/vídeo com ${prefix}s`)
+          if (!media) {
+            await reply(`❌ Responda uma imagem/vídeo com ${prefix}s`)
+            return
+          }
 
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
@@ -183,105 +211,146 @@ async function main() {
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
         } catch(e) {
-          console.error(e)
-          await reply('❌ Erro ao criar figurinha. Instale: pkg install ffmpeg')
+          console.error('Erro sticker:', e)
+          await reply('❌ Erro ao criar figurinha. Use: pkg install ffmpeg')
           await reagir('❌')
         }
+        return
       }
 
       // ========== TOIMG ==========
-      else if (command === 'toimg') {
+      if (command === 'toimg') {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply(`Responda um sticker com ${prefix}toimg`)
+        if (!quoted?.stickerMessage) {
+          await reply(`Responda um sticker com ${prefix}toimg`)
+          return
+        }
         await reagir('⏳')
-        const buf = await getBuffer(quoted.stickerMessage, 'sticker')
-        await nawty.sendMessage(from, { image: buf, caption: '✅' }, { quoted: msg })
-        await reagir('✅')
+        try {
+          const buf = await getBuffer(quoted.stickerMessage, 'sticker')
+          await nawty.sendMessage(from, { image: buf, caption: '✅' }, { quoted: msg })
+          await reagir('✅')
+        } catch {
+          await reply('Erro ao converter')
+        }
+        return
       }
 
       // ========== NICK ==========
-      else if (command === 'nick' || command === 'estilo') {
-        if (!q) return reply(`Use: ${prefix}nick seu texto`)
+      if (command === 'nick' || command === 'estilo') {
+        if (!q) {
+          await reply(`Use: ${prefix}nick seu texto`)
+          return
+        }
         let txt = `✨ *Estilos para:* ${q}\n\n`
         for (const name of Object.keys(STYLES)) {
           txt += `*${name}*: ${styleText(q, name)}\n`
         }
         await reply(txt)
+        return
       }
 
       // ========== CALC ==========
-      else if (command === 'calc' || command === 'calcular') {
-        if (!q) return reply(`Use: ${prefix}calc 2+2*5`)
+      if (command === 'calc' || command === 'calcular') {
+        if (!q) {
+          await reply(`Use: ${prefix}calc 2+2*5`)
+          return
+        }
         try {
-          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Expressão inválida')
+          if (!/^[0-9+\-*/().%\s]+$/.test(q)) {
+            await reply('Expressão inválida')
+            return
+          }
           const result = Function(`"use strict"; return (${q})`)()
           await reply(`🧮 *Resultado:*\n${q} = *${result}*`)
         } catch {
           await reply('Erro no cálculo')
         }
+        return
       }
 
       // ========== FUN ==========
-      else if (command === 'gay') {
-        const pct = Math.floor(Math.random()*101)
-        await reply(`🏳️‍🌈 *${q || pushname}* é *${pct}%* gay`)
+      if (command === 'gay') {
+        await reply(`🏳️‍🌈 *${q || pushname}* é *${Math.floor(Math.random()*101)}%* gay`)
+        return
       }
-      else if (command === 'ship') {
+      if (command === 'ship') {
         const pct = Math.floor(Math.random()*101)
         const n1 = args[0] || pushname
         const n2 = args[1] || 'Alguém'
         const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : '💔'
         await reply(`${emoji} *Ship*\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`)
+        return
       }
-      else if (command === 'chance') {
-        if (!q) return reply(`Use: ${prefix}chance de eu ficar rico`)
+      if (command === 'chance') {
+        if (!q) {
+          await reply(`Use: ${prefix}chance de eu ficar rico`)
+          return
+        }
         await reply(`🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`)
+        return
       }
-      else if (command === 'dado' || command === 'roll') {
+      if (command === 'dado' || command === 'roll') {
         await reply(`🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`)
+        return
       }
-      else if (command === 'cara' || command === 'coroa') {
+      if (command === 'cara' || command === 'coroa') {
         await reply(`🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`)
+        return
       }
 
       // ========== PP ==========
-      else if (command === 'pp' || command === 'perfil') {
+      if (command === 'pp' || command === 'perfil') {
         try {
           let jid = sender
           const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
           if (mentioned) jid = mentioned
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
-          if (!pp) return reply('Não foi possível obter a foto.')
+          if (!pp) {
+            await reply('Não foi possível obter a foto.')
+            return
+          }
           await nawty.sendMessage(from, { image: { url: pp }, caption: '📸' }, { quoted: msg })
         } catch {
           await reply('Erro ao pegar foto de perfil.')
         }
+        return
       }
 
       // ========== SAY ==========
-      else if (command === 'say') {
-        if (!q) return reply(`Use: ${prefix}say texto`)
+      if (command === 'say') {
+        if (!q) {
+          await reply(`Use: ${prefix}say texto`)
+          return
+        }
         await nawty.sendMessage(from, { text: q })
+        return
       }
 
       // ========== BÁSICOS ==========
-      else if (command === 'ping') {
+      if (command === 'ping') {
         const t = Date.now()
         await reply(`🏓 Pong!\n⏱️ ${Date.now()-t}ms`)
+        return
       }
-      else if (command === 'dono') {
+      if (command === 'dono') {
         await reply(`👑 *Dono*\n${config.NomeDoDono}\n${config.NumeroDoDono}`)
+        return
       }
-      else if (command === 'info') {
-        await reply(`🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nBotões: Ativo ✅`)
+      if (command === 'info') {
+        await reply(`🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nOnline ✅`)
+        return
       }
 
     } catch (e) {
-      console.error(colors.red('Erro:'), e)
+      console.error(colors.red('Erro geral:'), e)
     }
   })
 
-  GreenLog('✅ Bot pronto com menu de botões!')
+  GreenLog('✅ Bot pronto!')
 }
 
-main()
+main().catch(err => {
+  console.error('Erro fatal:', err)
+  process.exit(1)
+})
