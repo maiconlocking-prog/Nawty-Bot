@@ -1,7 +1,6 @@
 /*
   NAWTY BOT - Baileys 7.0.0-rc14
-  Com sistema básico de resposta
-  Agora responde também comandos enviados pela própria conta do bot
+  Menu interativo com botões
 */
 const fs = require('fs')
 const path = require('path')
@@ -13,7 +12,6 @@ const { CyanLog, RedLog, GreenLog } = require('./arquivos/js/logger.js')
 
 let nawty = null
 const prefix = config.prefix || '¥'
-const dono = (config.NumeroDoDono || '').replace(/\D/g, '')
 
 async function main() {
   try {
@@ -25,66 +23,123 @@ async function main() {
       return
     }
 
-    // Escuta mensagens
-    nawty.ev.on('messages.upsert', async ({ messages, type }) => {
+    nawty.ev.on('messages.upsert', async ({ messages }) => {
       try {
         const msg = messages[0]
         if (!msg || !msg.message) return
 
-        // Agora permite mensagens fromMe (da própria conta do bot)
-        // if (msg.key.fromMe) return  ← removido
-
         const from = msg.key.remoteJid
         const isGroup = from.endsWith('@g.us')
-        const sender = isGroup ? (msg.key.participant || msg.participant) : from
+        const sender = msg.key.participant || msg.key.remoteJid
+        const pushname = msg.pushName || 'Usuário'
 
-        // Extrai o texto da mensagem
-        const body = 
+        const body =
           msg.message.conversation ||
           msg.message.extendedTextMessage?.text ||
           msg.message.imageMessage?.caption ||
           msg.message.videoMessage?.caption ||
           msg.message.buttonsResponseMessage?.selectedButtonId ||
           msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+          msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
           ''
 
-        if (!body) return
+        // Trata resposta de lista interativa
+        let selectedId = ''
+        try {
+          if (msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+            const parsed = JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson)
+            selectedId = parsed?.id || ''
+          }
+        } catch {}
 
-        const isCmd = body.startsWith(prefix)
-        const command = isCmd ? body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : ''
-        const args = body.trim().split(/ +/).slice(1)
-        const q = args.join(' ')
+        const textBody = body || selectedId
+        if (!textBody) return
 
-        // Função de resposta rápida
+        const isCmd = textBody.startsWith(prefix)
+        const command = isCmd ? textBody.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : textBody.toLowerCase()
+
         const reply = async (texto) => {
           await nawty.sendMessage(from, { text: texto }, { quoted: msg })
         }
 
-        // ========== COMANDOS BÁSICOS ==========
-        if (isCmd) {
-          console.log(colors.yellow(`[CMD] ${command} | De: ${sender} | fromMe: ${msg.key.fromMe}`))
+        // ========== MENU COM BOTÕES ==========
+        if (command === 'menu' || command === 'help' || command === 'ajuda') {
+          console.log(colors.yellow(`[MENU] Solicitado por ${sender}`))
 
-          if (command === 'menu' || command === 'help' || command === 'ajuda') {
-            await reply(`🌸 *NAWTY BOT* 🌸\n\nPrefixo: ${prefix}\n\n*Comandos disponíveis:*\n${prefix}menu\n${prefix}ping\n${prefix}dono\n${prefix}info\n\nBot atualizado com Baileys 7 + Pairing Code`)
-          }
+          const menuTxt = `
+╭🌸─━⛩─━❄━─⛩━─🌸╮
 
-          else if (command === 'ping') {
-            const start = Date.now()
-            await reply(`🏓 Pong!\n⏱️ ${Date.now() - start}ms`)
-          }
+    『 𝗡𝗔𝗪𝗧𝗬 𝗕𝗢𝗧 』
 
-          else if (command === 'dono') {
-            await reply(`👑 Dono do bot: ${config.NomeDoDono || 'Não configurado'}\n📱 Número: ${config.NumeroDoDono || 'Não configurado'}`)
-          }
+╰🌸─━⛩─━❄━─⛩━─🌸╯
+        ❱❱ 𝗡𝗮𝘄𝘁𝘆 𝗕𝗼𝘁 ❰❰
+╭🌸━─━─━─🌸─━─━─━─🌸╮
+│❄╭─⛩༺ナウティ༻⛩─╮
+│❄│ 𝐁𝐨𝐭: ${config.NomeDoBot}
+│❄│ 𝐔𝐬𝐞𝐫: ${pushname}
+│❄│ 𝐍𝐮𝐦𝐞𝐫𝐨: ${sender.split('@')[0]}
+│❄│ 𝐆𝐫𝐮𝐩𝐨: ${isGroup ? 'Sim ✅' : 'Não ❌'}
+│❄│ 𝐒𝐭𝐚𝐭𝐮𝐬: Online 🟢
+│❄╰─⛩༺ナウティ༻⛩─╯
+╰🌸━─━─━─🌸─━─━─━─🌸╯`
 
-          else if (command === 'info') {
-            await reply(`🤖 *Informações do Bot*\n\nNome: ${config.NomeDoBot}\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅`)
-          }
+          const botoes = [{
+            name: "single_select",
+            buttonParamsJson: JSON.stringify({
+              title: "🌸 𝐌𝐄𝐍𝐔 ❆ 𝐋𝐈𝐒𝐓𝐀 🌸",
+              sections: [{
+                title: "Escolha uma categoria",
+                rows: [
+                  { header: "𝗠𝗘𝗡𝗨 𝗔𝗗𝗠", title: "🛡️ Admin", description: "Comandos para administradores", id: `${prefix}menuadm` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦", title: "🗒 Comandos", description: "Comandos aleatórios", id: `${prefix}menucmd` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗗𝗢𝗡𝗢", title: "👑 Dono", description: "Comandos exclusivos do dono", id: `${prefix}menudono` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗦", title: "⬇️ Downloads", description: "Baixar mídias", id: `${prefix}menudownloads` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗘𝗙𝗘𝗜𝗧𝗢𝗦", title: "🎨 Efeitos", description: "Efeitos de imagem e áudio", id: `${prefix}menuefeitos` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗜𝗔", title: "🤖 IA", description: "Inteligência Artificial", id: `${prefix}menuia` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗠𝗜𝗗𝗜𝗔𝗦", title: "🎬 Mídias", description: "Comandos de mídia", id: `${prefix}menumidias` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗣𝗥𝗘𝗠𝗜𝗨𝗠", title: "💎 Premium", description: "Comandos premium", id: `${prefix}menupremium` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗥𝗘𝗦𝗘𝗡𝗛𝗔", title: "🎮 Jogos", description: "Jogos e brincadeiras", id: `${prefix}menubrincadeira` },
+                  { header: "𝗠𝗘𝗡𝗨 𝗥𝗣𝗚", title: "⚔️ RPG", description: "Sistema de RPG", id: `${prefix}menurpg` }
+                ]
+              }]
+            })
+          }]
 
-          else {
-            // Comando não encontrado
-            // await reply(`Comando *${command}* não encontrado.\nUse ${prefix}menu`)
+          try {
+            // Tenta enviar menu interativo moderno
+            await nawty.relayMessage(from, {
+              interactiveMessage: {
+                body: { text: '⛩️🎐 _Clique no botão abaixo para ver os menus._ 🎐⛩️' },
+                footer: { text: 'Nawty Bot • Baileys 7' },
+                nativeFlowMessage: {
+                  buttons: botoes
+                }
+              }
+            }, {})
+          } catch (e) {
+            // Fallback caso o interativo falhe
+            console.log('Fallback menu texto:', e.message)
+            await reply(menuTxt + `\n\n*Comandos:*\n${prefix}ping\n${prefix}info\n${prefix}dono\n${prefix}menu`)
           }
+        }
+
+        // ========== OUTROS COMANDOS ==========
+        else if (command === 'ping') {
+          const start = Date.now()
+          await reply(`🏓 Pong!\n⏱️ ${Date.now() - start}ms`)
+        }
+
+        else if (command === 'dono') {
+          await reply(`👑 Dono: ${config.NomeDoDono || 'Não configurado'}\n📱 ${config.NumeroDoDono || 'Não configurado'}`)
+        }
+
+        else if (command === 'info') {
+          await reply(`🤖 *${config.NomeDoBot}*\n\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅`)
+        }
+
+        // Resposta dos submenus (placeholder)
+        else if (['menuadm','menucmd','menudono','menudownloads','menuefeitos','menuia','menumidias','menupremium','menubrincadeira','menurpg'].includes(command)) {
+          await reply(`📂 Menu *${command}* ainda em desenvolvimento.\nEm breve terá todos os comandos dessa categoria.`)
         }
 
       } catch (e) {
@@ -92,7 +147,7 @@ async function main() {
       }
     })
 
-    GreenLog('✅ Bot pronto e ouvindo mensagens! (inclusive da própria conta)')
+    GreenLog('✅ Bot pronto! Menu com botões ativo.')
 
   } catch (err) {
     console.error(colors.red('Erro ao iniciar:'), err)
