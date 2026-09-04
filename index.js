@@ -1,10 +1,11 @@
 /*
   NAWTY BOT - Baileys 7.0.0-rc14
-  Menu funcional e estável
+  Comandos inspirados na Nazuna + menu melhorado
 */
 const fs = require('fs')
 const path = require('path')
 const colors = require('colors')
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -12,6 +13,16 @@ const { CyanLog, RedLog, GreenLog } = require('./arquivos/js/logger.js')
 
 let nawty = null
 const prefix = config.prefix || '¥'
+
+// Função auxiliar para baixar mídia
+async function getBuffer(message, type) {
+  const stream = await downloadContentFromMessage(message, type)
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) {
+    buffer = Buffer.concat([buffer, chunk])
+  }
+  return buffer
+}
 
 async function main() {
   try {
@@ -46,86 +57,102 @@ async function main() {
 
         const isCmd = body.startsWith(prefix)
         const command = isCmd ? body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : body.toLowerCase()
+        const args = body.trim().split(/ +/).slice(1)
 
         const reply = async (texto) => {
           await nawty.sendMessage(from, { text: texto }, { quoted: msg })
         }
 
+        const reagir = async (emoji) => {
+          await nawty.sendMessage(from, { react: { text: emoji, key: msg.key } })
+        }
+
         // ==================== MENU ====================
         if (command === 'menu' || command === 'help' || command === 'ajuda') {
-          console.log(colors.yellow(`[MENU] ${sender}`))
-
           const menuTxt = `
-╭🌸────────────🌸╮
-      *NAWTY BOT*
-╰🌸────────────🌸╯
+╭🌸──────────────🌸╮
+       *NAWTY BOT*
+╰🌸──────────────🌸╯
 
-👤 Usuário: *${pushname}*
-📱 Número: *${sender.split('@')[0]}*
-🤖 Bot: *${config.NomeDoBot}*
+👤 *${pushname}*
+🤖 ${config.NomeDoBot}
 🔰 Prefixo: *${prefix}*
-📍 Grupo: *${isGroup ? 'Sim' : 'Não'}*
-🟢 Status: *Online*
 
-╭─『 𝗠𝗘𝗡𝗨𝗦 』
+╭─『 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 』
 │
-│ 🛡️ ${prefix}menuadm
-│ 🗒 ${prefix}menucmd
-│ 👑 ${prefix}menudono
-│ ⬇️ ${prefix}menudownloads
-│ 🎨 ${prefix}menuefeitos
-│ 🤖 ${prefix}menuia
-│ 🎬 ${prefix}menumidias
-│ 💎 ${prefix}menupremium
-│ 🎮 ${prefix}menubrincadeira
-│ ⚔️ ${prefix}menurpg
+│ 🎨 *Figurinhas*
+│ ⊃ ${prefix}s / ${prefix}sticker
+│ ⊃ ${prefix}f
 │
-╰───────────────
+│ ⚡ *Utilitários*
+│ ⊃ ${prefix}ping
+│ ⊃ ${prefix}info
+│ ⊃ ${prefix}dono
+│
+│ 📂 *Menus*
+│ ⊃ ${prefix}menuadm
+│ ⊃ ${prefix}menudono
+│ ⊃ ${prefix}menucmd
+│
+╰────────────────
 
-⚡ Comandos rápidos:
-• ${prefix}ping
-• ${prefix}info
-• ${prefix}dono
-
+_Envie uma imagem/vídeo com ${prefix}s para fazer figurinha_
 _Nawty Bot • Baileys 7_`
 
-          // Tenta enviar com imagem se existir
-          const imgPath = path.join(__dirname, 'arquivos/imagem/menu.jpg')
-          
+          await reply(menuTxt)
+        }
+
+        // ==================== STICKER (inspirado na Nazuna) ====================
+        else if (['s', 'sticker', 'f', 'fig', 'figurinha'].includes(command)) {
           try {
-            if (fs.existsSync(imgPath)) {
-              await nawty.sendMessage(from, {
-                image: fs.readFileSync(imgPath),
-                caption: menuTxt
-              }, { quoted: msg })
-            } else {
-              // Sem imagem → tenta lista interativa simples
-              await nawty.sendMessage(from, {
-                text: menuTxt,
-                footer: 'Nawty Bot',
-                title: '🌸 Menu Principal',
-                buttonText: 'Ver Categorias',
-                sections: [{
-                  title: 'Escolha uma categoria',
-                  rows: [
-                    { title: '🛡️ Admin', rowId: `${prefix}menuadm`, description: 'Comandos de administradores' },
-                    { title: '🗒 Comandos', rowId: `${prefix}menucmd`, description: 'Comandos aleatórios' },
-                    { title: '👑 Dono', rowId: `${prefix}menudono`, description: 'Comandos do dono' },
-                    { title: '⬇️ Downloads', rowId: `${prefix}menudownloads`, description: 'Baixar mídias' },
-                    { title: '🎨 Efeitos', rowId: `${prefix}menuefeitos`, description: 'Efeitos de imagem/áudio' },
-                    { title: '🤖 IA', rowId: `${prefix}menuia`, description: 'Inteligência Artificial' },
-                    { title: '🎬 Mídias', rowId: `${prefix}menumidias`, description: 'Comandos de mídia' },
-                    { title: '💎 Premium', rowId: `${prefix}menupremium`, description: 'Comandos premium' },
-                    { title: '🎮 Jogos', rowId: `${prefix}menubrincadeira`, description: 'Jogos e brincadeiras' },
-                    { title: '⚔️ RPG', rowId: `${prefix}menurpg`, description: 'Sistema de RPG' }
-                  ]
-                }]
-              }, { quoted: msg })
+            await reagir('⏳')
+
+            let mediaMessage = null
+            let isVideo = false
+
+            // Verifica se é resposta a uma mídia
+            if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+              const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage
+              if (quoted.imageMessage) {
+                mediaMessage = quoted.imageMessage
+                isVideo = false
+              } else if (quoted.videoMessage) {
+                mediaMessage = quoted.videoMessage
+                isVideo = true
+              } else if (quoted.stickerMessage) {
+                mediaMessage = quoted.stickerMessage
+                isVideo = false
+              }
             }
+
+            // Ou se a própria mensagem tem mídia
+            if (!mediaMessage) {
+              if (msg.message.imageMessage) {
+                mediaMessage = msg.message.imageMessage
+                isVideo = false
+              } else if (msg.message.videoMessage) {
+                mediaMessage = msg.message.videoMessage
+                isVideo = true
+              }
+            }
+
+            if (!mediaMessage) {
+              await reply(`❌ Marque ou responda uma *imagem* ou *vídeo* com o comando:\n\n${prefix}s`)
+              return
+            }
+
+            const buffer = await getBuffer(mediaMessage, isVideo ? 'video' : 'image')
+
+            await nawty.sendMessage(from, {
+              sticker: buffer
+            }, { quoted: msg })
+
+            await reagir('✅')
+
           } catch (err) {
-            // Último fallback: só texto
-            console.log('Erro no menu avançado, usando texto puro:', err.message)
-            await reply(menuTxt)
+            console.error('Erro no sticker:', err)
+            await reply('❌ Erro ao criar a figurinha. Tente novamente com outra mídia.')
+            await reagir('❌')
           }
         }
 
@@ -140,12 +167,13 @@ _Nawty Bot • Baileys 7_`
         }
 
         else if (command === 'info') {
-          await reply(`🤖 *Informações*\n\nNome: ${config.NomeDoBot}\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅`)
+          await reply(`🤖 *${config.NomeDoBot}*\n\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅\n
+Comandos de figurinha: ${prefix}s | ${prefix}sticker | ${prefix}f`)
         }
 
-        // Submenus (placeholder)
+        // Placeholders de menus
         else if (['menuadm','menucmd','menudono','menudownloads','menuefeitos','menuia','menumidias','menupremium','menubrincadeira','menurpg'].includes(command)) {
-          await reply(`📂 O menu *${command}* ainda está em desenvolvimento.\nEm breve terá a lista completa de comandos.`)
+          await reply(`📂 Menu *${command}* em desenvolvimento.\nEm breve mais comandos!`)
         }
 
       } catch (e) {
@@ -153,7 +181,7 @@ _Nawty Bot • Baileys 7_`
       }
     })
 
-    GreenLog('✅ Bot pronto e respondendo!')
+    GreenLog('✅ Bot pronto! Comando de sticker ativo.')
 
   } catch (err) {
     console.error(colors.red('Erro ao iniciar:'), err)
