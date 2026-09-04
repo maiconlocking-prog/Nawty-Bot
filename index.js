@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menu em texto estável + comandos
+  Sistema de fotos nos comandos (setfoto)
 */
 const fs = require('fs')
 const path = require('path')
@@ -15,6 +15,19 @@ const { GreenLog } = require('./arquivos/js/logger.js')
 
 let nawty = null
 const prefix = config.prefix || '¥'
+const FOTOS_PATH = path.join(__dirname, 'database/fotos.json')
+const FOTOS_DIR = path.join(__dirname, 'database/fotos')
+
+// cria pastas se não existirem
+if (!fs.existsSync(FOTOS_DIR)) fs.mkdirSync(FOTOS_DIR, { recursive: true })
+if (!fs.existsSync(FOTOS_PATH)) fs.writeFileSync(FOTOS_PATH, '{}')
+
+function loadFotos() {
+  try { return JSON.parse(fs.readFileSync(FOTOS_PATH)) } catch { return {} }
+}
+function saveFotos(data) {
+  fs.writeFileSync(FOTOS_PATH, JSON.stringify(data, null, 2))
+}
 
 // ===================== STICKER HELPERS =====================
 function ensureTmpDir() {
@@ -71,6 +84,20 @@ async function getBuffer(msg, type) {
   return b
 }
 
+// envia resposta com foto do comando (se existir)
+async function replyWithFoto(sock, from, cmdName, texto, quotedMsg) {
+  const fotos = loadFotos()
+  const fotoPath = fotos[cmdName]
+  if (fotoPath && fs.existsSync(fotoPath)) {
+    await sock.sendMessage(from, {
+      image: fs.readFileSync(fotoPath),
+      caption: texto
+    }, { quoted: quotedMsg })
+  } else {
+    await sock.sendMessage(from, { text: texto }, { quoted: quotedMsg })
+  }
+}
+
 // ===================== TEXT STYLES =====================
 const STYLES = {
   bold: {'a':'𝐚','b':'𝐛','c':'𝐜','d':'𝐝','e':'𝐞','f':'𝐟','g':'𝐠','h':'𝐡','i':'𝐢','j':'𝐣','k':'𝐤','l':'𝐥','m':'𝐦','n':'𝐧','o':'𝐨','p':'𝐩','q':'𝐪','r':'𝐫','s':'𝐬','t':'𝐭','u':'𝐮','v':'𝐯','w':'𝐰','x':'𝐱','y':'𝐲','z':'𝐳','A':'𝐀','B':'𝐁','C':'𝐂','D':'𝐃','E':'𝐄','F':'𝐅','G':'𝐆','H':'𝐇','I':'𝐈','J':'𝐉','K':'𝐊','L':'𝐋','M':'𝐌','N':'𝐍','O':'𝐎','P':'𝐏','Q':'𝐐','R':'𝐑','S':'𝐒','T':'𝐓','U':'𝐔','V':'𝐕','W':'𝐖','X':'𝐗','Y':'𝐘','Z':'𝐙','0':'𝟎','1':'𝟏','2':'𝟐','3':'𝟑','4':'𝟒','5':'𝟓','6':'𝟔','7':'𝟕','8':'𝟖','9':'𝟗'},
@@ -89,14 +116,9 @@ function styleText(text, style) {
 async function main() {
   console.log(colors.cyan('🌸 Iniciando Nawty Bot...'))
   nawty = await startConnection(null, config)
-  if (!nawty) {
-    console.log(colors.red('Falha na conexão'))
-    return
-  }
+  if (!nawty) return
 
-  console.log(colors.green('Socket pronto, registrando listener de mensagens...'))
-
-  nawty.ev.on('messages.upsert', async ({ messages, type }) => {
+  nawty.ev.on('messages.upsert', async ({ messages }) => {
     try {
       const msg = messages[0]
       if (!msg?.message) return
@@ -110,22 +132,9 @@ async function main() {
         msg.message.extendedTextMessage?.text ||
         msg.message.imageMessage?.caption ||
         msg.message.videoMessage?.caption ||
-        msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
-        msg.message.buttonsResponseMessage?.selectedButtonId ||
         ''
 
-      // nativeFlow response
-      try {
-        const native = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage
-        if (native?.paramsJson) {
-          const parsed = JSON.parse(native.paramsJson)
-          if (parsed?.id) body = parsed.id
-        }
-      } catch {}
-
       if (!body) return
-
-      console.log(colors.yellow(`[MSG] ${body} | de: ${sender}`))
 
       const isCmd = body.startsWith(prefix)
       if (!isCmd) return
@@ -134,22 +143,91 @@ async function main() {
       const args = body.trim().split(/ +/).slice(1)
       const q = args.join(' ')
 
-      console.log(colors.cyan(`[CMD] ${command}`))
-
       const reply = async (t) => {
-        try {
-          await nawty.sendMessage(from, { text: t }, { quoted: msg })
-        } catch (e) {
-          console.error('Erro no reply:', e.message)
-        }
+        await nawty.sendMessage(from, { text: t }, { quoted: msg })
       }
       const reagir = async (e) => {
-        try {
-          await nawty.sendMessage(from, { react: { text: e, key: msg.key } })
-        } catch {}
+        try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {}
       }
 
-      // ========== MENU (TEXTO PURO - ESTÁVEL) ==========
+      // ========== SETFOTO ==========
+      if (command === 'setfoto') {
+        if (!q) {
+          await reply(`📸 *Como usar:*\n\n1. Envie ou marque uma *imagem*\n2. Responda ela com:\n${prefix}setfoto nome_do_comando\n\n*Exemplos:*\n${prefix}setfoto menu\n${prefix}setfoto gay\n${prefix}setfoto ship\n${prefix}setfoto ping\n\n*Remover foto:*\n${prefix}delfoto menu\n\n*Ver fotos salvas:*\n${prefix}listfoto`)
+          return
+        }
+
+        const cmdName = q.toLowerCase().replace(prefix, '').trim()
+        let media = null
+
+        // imagem na mensagem
+        if (msg.message.imageMessage) {
+          media = msg.message.imageMessage
+        }
+        // resposta a imagem
+        else if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
+          media = msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage
+        }
+
+        if (!media) {
+          await reply(`❌ Marque ou envie uma *imagem* junto com:\n${prefix}setfoto ${cmdName}`)
+          return
+        }
+
+        try {
+          await reagir('⏳')
+          const buffer = await getBuffer(media, 'image')
+          const filePath = path.join(FOTOS_DIR, `${cmdName}.jpg`)
+          fs.writeFileSync(filePath, buffer)
+
+          const fotos = loadFotos()
+          fotos[cmdName] = filePath
+          saveFotos(fotos)
+
+          await reply(`✅ Foto definida para o comando *${prefix}${cmdName}*\n\nAgora quando alguém usar ${prefix}${cmdName}, a foto vai junto.`)
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro ao salvar a foto.')
+          await reagir('❌')
+        }
+        return
+      }
+
+      // ========== DELFOTO ==========
+      if (command === 'delfoto') {
+        if (!q) {
+          await reply(`Use: ${prefix}delfoto nome_do_comando\nEx: ${prefix}delfoto menu`)
+          return
+        }
+        const cmdName = q.toLowerCase().replace(prefix, '').trim()
+        const fotos = loadFotos()
+        if (!fotos[cmdName]) {
+          await reply(`Nenhuma foto salva para *${cmdName}*`)
+          return
+        }
+        try { if (fs.existsSync(fotos[cmdName])) fs.unlinkSync(fotos[cmdName]) } catch {}
+        delete fotos[cmdName]
+        saveFotos(fotos)
+        await reply(`🗑️ Foto do comando *${prefix}${cmdName}* removida.`)
+        return
+      }
+
+      // ========== LISTFOTO ==========
+      if (command === 'listfoto') {
+        const fotos = loadFotos()
+        const keys = Object.keys(fotos)
+        if (!keys.length) {
+          await reply('Nenhuma foto configurada ainda.\nUse: ' + prefix + 'setfoto menu')
+          return
+        }
+        let txt = '📸 *Fotos configuradas:*\n\n'
+        keys.forEach(k => txt += `• ${prefix}${k}\n`)
+        await reply(txt)
+        return
+      }
+
+      // ========== MENU ==========
       if (['menu','help','ajuda'].includes(command)) {
         const menu = `╭🌸───────────────🌸╮
        *NAWTY BOT*
@@ -176,6 +254,12 @@ async function main() {
 │ ${prefix}cara
 ╰──────────────
 
+╭─『 FOTOS 』
+│ ${prefix}setfoto <comando>
+│ ${prefix}delfoto <comando>
+│ ${prefix}listfoto
+╰──────────────
+
 ╭─『 UTILS 』
 │ ${prefix}ping
 │ ${prefix}calc 2+2
@@ -184,7 +268,7 @@ async function main() {
 │ ${prefix}dono
 ╰──────────────`
 
-        await reply(menu)
+        await replyWithFoto(nawty, from, 'menu', menu, msg)
         return
       }
 
@@ -211,8 +295,8 @@ async function main() {
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
         } catch(e) {
-          console.error('Erro sticker:', e)
-          await reply('❌ Erro ao criar figurinha. Use: pkg install ffmpeg')
+          console.error(e)
+          await reply('❌ Erro ao criar figurinha.')
           await reagir('❌')
         }
         return
@@ -246,7 +330,7 @@ async function main() {
         for (const name of Object.keys(STYLES)) {
           txt += `*${name}*: ${styleText(q, name)}\n`
         }
-        await reply(txt)
+        await replyWithFoto(nawty, from, 'nick', txt, msg)
         return
       }
 
@@ -271,7 +355,8 @@ async function main() {
 
       // ========== FUN ==========
       if (command === 'gay') {
-        await reply(`🏳️‍🌈 *${q || pushname}* é *${Math.floor(Math.random()*101)}%* gay`)
+        const texto = `🏳️‍🌈 *${q || pushname}* é *${Math.floor(Math.random()*101)}%* gay`
+        await replyWithFoto(nawty, from, 'gay', texto, msg)
         return
       }
       if (command === 'ship') {
@@ -279,7 +364,8 @@ async function main() {
         const n1 = args[0] || pushname
         const n2 = args[1] || 'Alguém'
         const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : '💔'
-        await reply(`${emoji} *Ship*\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`)
+        const texto = `${emoji} *Ship*\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`
+        await replyWithFoto(nawty, from, 'ship', texto, msg)
         return
       }
       if (command === 'chance') {
@@ -287,15 +373,18 @@ async function main() {
           await reply(`Use: ${prefix}chance de eu ficar rico`)
           return
         }
-        await reply(`🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`)
+        const texto = `🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`
+        await replyWithFoto(nawty, from, 'chance', texto, msg)
         return
       }
       if (command === 'dado' || command === 'roll') {
-        await reply(`🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`)
+        const texto = `🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`
+        await replyWithFoto(nawty, from, 'dado', texto, msg)
         return
       }
       if (command === 'cara' || command === 'coroa') {
-        await reply(`🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`)
+        const texto = `🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`
+        await replyWithFoto(nawty, from, 'cara', texto, msg)
         return
       }
 
@@ -330,27 +419,27 @@ async function main() {
       // ========== BÁSICOS ==========
       if (command === 'ping') {
         const t = Date.now()
-        await reply(`🏓 Pong!\n⏱️ ${Date.now()-t}ms`)
+        const texto = `🏓 Pong!\n⏱️ ${Date.now()-t}ms`
+        await replyWithFoto(nawty, from, 'ping', texto, msg)
         return
       }
       if (command === 'dono') {
-        await reply(`👑 *Dono*\n${config.NomeDoDono}\n${config.NumeroDoDono}`)
+        const texto = `👑 *Dono*\n${config.NomeDoDono}\n${config.NumeroDoDono}`
+        await replyWithFoto(nawty, from, 'dono', texto, msg)
         return
       }
       if (command === 'info') {
-        await reply(`🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nOnline ✅`)
+        const texto = `🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nOnline ✅`
+        await replyWithFoto(nawty, from, 'info', texto, msg)
         return
       }
 
     } catch (e) {
-      console.error(colors.red('Erro geral:'), e)
+      console.error(colors.red('Erro:'), e)
     }
   })
 
-  GreenLog('✅ Bot pronto!')
+  GreenLog('✅ Bot pronto! Sistema de fotos ativo.')
 }
 
-main().catch(err => {
-  console.error('Erro fatal:', err)
-  process.exit(1)
-})
+main()
