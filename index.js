@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7.0.0-rc14
-  Menu interativo com botões
+  Menu funcional e estável
 */
 const fs = require('fs')
 const path = require('path')
@@ -38,108 +38,114 @@ async function main() {
           msg.message.extendedTextMessage?.text ||
           msg.message.imageMessage?.caption ||
           msg.message.videoMessage?.caption ||
-          msg.message.buttonsResponseMessage?.selectedButtonId ||
           msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
-          msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+          msg.message.buttonsResponseMessage?.selectedButtonId ||
           ''
 
-        // Trata resposta de lista interativa
-        let selectedId = ''
-        try {
-          if (msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-            const parsed = JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson)
-            selectedId = parsed?.id || ''
-          }
-        } catch {}
+        if (!body) return
 
-        const textBody = body || selectedId
-        if (!textBody) return
-
-        const isCmd = textBody.startsWith(prefix)
-        const command = isCmd ? textBody.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : textBody.toLowerCase()
+        const isCmd = body.startsWith(prefix)
+        const command = isCmd ? body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : body.toLowerCase()
 
         const reply = async (texto) => {
           await nawty.sendMessage(from, { text: texto }, { quoted: msg })
         }
 
-        // ========== MENU COM BOTÕES ==========
+        // ==================== MENU ====================
         if (command === 'menu' || command === 'help' || command === 'ajuda') {
-          console.log(colors.yellow(`[MENU] Solicitado por ${sender}`))
+          console.log(colors.yellow(`[MENU] ${sender}`))
 
           const menuTxt = `
-╭🌸─━⛩─━❄━─⛩━─🌸╮
+╭🌸────────────🌸╮
+      *NAWTY BOT*
+╰🌸────────────🌸╯
 
-    『 𝗡𝗔𝗪𝗧𝗬 𝗕𝗢𝗧 』
+👤 Usuário: *${pushname}*
+📱 Número: *${sender.split('@')[0]}*
+🤖 Bot: *${config.NomeDoBot}*
+🔰 Prefixo: *${prefix}*
+📍 Grupo: *${isGroup ? 'Sim' : 'Não'}*
+🟢 Status: *Online*
 
-╰🌸─━⛩─━❄━─⛩━─🌸╯
-        ❱❱ 𝗡𝗮𝘄𝘁𝘆 𝗕𝗼𝘁 ❰❰
-╭🌸━─━─━─🌸─━─━─━─🌸╮
-│❄╭─⛩༺ナウティ༻⛩─╮
-│❄│ 𝐁𝐨𝐭: ${config.NomeDoBot}
-│❄│ 𝐔𝐬𝐞𝐫: ${pushname}
-│❄│ 𝐍𝐮𝐦𝐞𝐫𝐨: ${sender.split('@')[0]}
-│❄│ 𝐆𝐫𝐮𝐩𝐨: ${isGroup ? 'Sim ✅' : 'Não ❌'}
-│❄│ 𝐒𝐭𝐚𝐭𝐮𝐬: Online 🟢
-│❄╰─⛩༺ナウティ༻⛩─╯
-╰🌸━─━─━─🌸─━─━─━─🌸╯`
+╭─『 𝗠𝗘𝗡𝗨𝗦 』
+│
+│ 🛡️ ${prefix}menuadm
+│ 🗒 ${prefix}menucmd
+│ 👑 ${prefix}menudono
+│ ⬇️ ${prefix}menudownloads
+│ 🎨 ${prefix}menuefeitos
+│ 🤖 ${prefix}menuia
+│ 🎬 ${prefix}menumidias
+│ 💎 ${prefix}menupremium
+│ 🎮 ${prefix}menubrincadeira
+│ ⚔️ ${prefix}menurpg
+│
+╰───────────────
 
-          const botoes = [{
-            name: "single_select",
-            buttonParamsJson: JSON.stringify({
-              title: "🌸 𝐌𝐄𝐍𝐔 ❆ 𝐋𝐈𝐒𝐓𝐀 🌸",
-              sections: [{
-                title: "Escolha uma categoria",
-                rows: [
-                  { header: "𝗠𝗘𝗡𝗨 𝗔𝗗𝗠", title: "🛡️ Admin", description: "Comandos para administradores", id: `${prefix}menuadm` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦", title: "🗒 Comandos", description: "Comandos aleatórios", id: `${prefix}menucmd` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗗𝗢𝗡𝗢", title: "👑 Dono", description: "Comandos exclusivos do dono", id: `${prefix}menudono` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗦", title: "⬇️ Downloads", description: "Baixar mídias", id: `${prefix}menudownloads` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗘𝗙𝗘𝗜𝗧𝗢𝗦", title: "🎨 Efeitos", description: "Efeitos de imagem e áudio", id: `${prefix}menuefeitos` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗜𝗔", title: "🤖 IA", description: "Inteligência Artificial", id: `${prefix}menuia` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗠𝗜𝗗𝗜𝗔𝗦", title: "🎬 Mídias", description: "Comandos de mídia", id: `${prefix}menumidias` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗣𝗥𝗘𝗠𝗜𝗨𝗠", title: "💎 Premium", description: "Comandos premium", id: `${prefix}menupremium` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗥𝗘𝗦𝗘𝗡𝗛𝗔", title: "🎮 Jogos", description: "Jogos e brincadeiras", id: `${prefix}menubrincadeira` },
-                  { header: "𝗠𝗘𝗡𝗨 𝗥𝗣𝗚", title: "⚔️ RPG", description: "Sistema de RPG", id: `${prefix}menurpg` }
-                ]
-              }]
-            })
-          }]
+⚡ Comandos rápidos:
+• ${prefix}ping
+• ${prefix}info
+• ${prefix}dono
 
+_Nawty Bot • Baileys 7_`
+
+          // Tenta enviar com imagem se existir
+          const imgPath = path.join(__dirname, 'arquivos/imagem/menu.jpg')
+          
           try {
-            // Tenta enviar menu interativo moderno
-            await nawty.relayMessage(from, {
-              interactiveMessage: {
-                body: { text: '⛩️🎐 _Clique no botão abaixo para ver os menus._ 🎐⛩️' },
-                footer: { text: 'Nawty Bot • Baileys 7' },
-                nativeFlowMessage: {
-                  buttons: botoes
-                }
-              }
-            }, {})
-          } catch (e) {
-            // Fallback caso o interativo falhe
-            console.log('Fallback menu texto:', e.message)
-            await reply(menuTxt + `\n\n*Comandos:*\n${prefix}ping\n${prefix}info\n${prefix}dono\n${prefix}menu`)
+            if (fs.existsSync(imgPath)) {
+              await nawty.sendMessage(from, {
+                image: fs.readFileSync(imgPath),
+                caption: menuTxt
+              }, { quoted: msg })
+            } else {
+              // Sem imagem → tenta lista interativa simples
+              await nawty.sendMessage(from, {
+                text: menuTxt,
+                footer: 'Nawty Bot',
+                title: '🌸 Menu Principal',
+                buttonText: 'Ver Categorias',
+                sections: [{
+                  title: 'Escolha uma categoria',
+                  rows: [
+                    { title: '🛡️ Admin', rowId: `${prefix}menuadm`, description: 'Comandos de administradores' },
+                    { title: '🗒 Comandos', rowId: `${prefix}menucmd`, description: 'Comandos aleatórios' },
+                    { title: '👑 Dono', rowId: `${prefix}menudono`, description: 'Comandos do dono' },
+                    { title: '⬇️ Downloads', rowId: `${prefix}menudownloads`, description: 'Baixar mídias' },
+                    { title: '🎨 Efeitos', rowId: `${prefix}menuefeitos`, description: 'Efeitos de imagem/áudio' },
+                    { title: '🤖 IA', rowId: `${prefix}menuia`, description: 'Inteligência Artificial' },
+                    { title: '🎬 Mídias', rowId: `${prefix}menumidias`, description: 'Comandos de mídia' },
+                    { title: '💎 Premium', rowId: `${prefix}menupremium`, description: 'Comandos premium' },
+                    { title: '🎮 Jogos', rowId: `${prefix}menubrincadeira`, description: 'Jogos e brincadeiras' },
+                    { title: '⚔️ RPG', rowId: `${prefix}menurpg`, description: 'Sistema de RPG' }
+                  ]
+                }]
+              }, { quoted: msg })
+            }
+          } catch (err) {
+            // Último fallback: só texto
+            console.log('Erro no menu avançado, usando texto puro:', err.message)
+            await reply(menuTxt)
           }
         }
 
-        // ========== OUTROS COMANDOS ==========
+        // ==================== OUTROS COMANDOS ====================
         else if (command === 'ping') {
           const start = Date.now()
-          await reply(`🏓 Pong!\n⏱️ ${Date.now() - start}ms`)
+          await reply(`🏓 *Pong!*\n⏱️ ${Date.now() - start}ms`)
         }
 
         else if (command === 'dono') {
-          await reply(`👑 Dono: ${config.NomeDoDono || 'Não configurado'}\n📱 ${config.NumeroDoDono || 'Não configurado'}`)
+          await reply(`👑 *Dono do Bot*\n\nNome: ${config.NomeDoDono || 'Não configurado'}\nNúmero: ${config.NumeroDoDono || 'Não configurado'}`)
         }
 
         else if (command === 'info') {
-          await reply(`🤖 *${config.NomeDoBot}*\n\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅`)
+          await reply(`🤖 *Informações*\n\nNome: ${config.NomeDoBot}\nPrefixo: ${prefix}\nVersão: Baileys 7.0.0-rc14\nStatus: Online ✅`)
         }
 
-        // Resposta dos submenus (placeholder)
+        // Submenus (placeholder)
         else if (['menuadm','menucmd','menudono','menudownloads','menuefeitos','menuia','menumidias','menupremium','menubrincadeira','menurpg'].includes(command)) {
-          await reply(`📂 Menu *${command}* ainda em desenvolvimento.\nEm breve terá todos os comandos dessa categoria.`)
+          await reply(`📂 O menu *${command}* ainda está em desenvolvimento.\nEm breve terá a lista completa de comandos.`)
         }
 
       } catch (e) {
@@ -147,7 +153,7 @@ async function main() {
       }
     })
 
-    GreenLog('✅ Bot pronto! Menu com botões ativo.')
+    GreenLog('✅ Bot pronto e respondendo!')
 
   } catch (err) {
     console.error(colors.red('Erro ao iniciar:'), err)
