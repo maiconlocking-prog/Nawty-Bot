@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Muitos comandos offline inspirados na Nazuna
+  Com suporte a botões interativos (opção 3)
 */
 const fs = require('fs')
 const path = require('path')
@@ -8,10 +8,11 @@ const colors = require('colors')
 const ffmpeg = require('fluent-ffmpeg')
 const webp = require('node-webpmux')
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
+const { sendButtonMenu, sendQuickButtons } = require('./arquivos/js/buttons.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
-const { GreenLog, RedLog } = require('./arquivos/js/logger.js')
+const { GreenLog } = require('./arquivos/js/logger.js')
 
 let nawty = null
 const prefix = config.prefix || '¥'
@@ -77,9 +78,7 @@ const STYLES = {
   italic: {'a':'𝘢','b':'𝘣','c':'𝘤','d':'𝘥','e':'𝘦','f':'𝘧','g':'𝘨','h':'𝘩','i':'𝘪','j':'𝘫','k':'𝘬','l':'𝘭','m':'𝘮','n':'𝘯','o':'𝘰','p':'𝘱','q':'𝘲','r':'𝘳','s':'𝘴','t':'𝘵','u':'𝘶','v':'𝘷','w':'𝘸','x':'𝘹','y':'𝘺','z':'𝘻','A':'𝘈','B':'𝘉','C':'𝘊','D':'𝘋','E':'𝘌','F':'𝘍','G':'𝘎','H':'𝘏','I':'𝘐','J':'𝘑','K':'𝘒','L':'𝘓','M':'𝘔','N':'𝘕','O':'𝘖','P':'𝘗','Q':'𝘘','R':'𝘙','S':'𝘚','T':'𝘛','U':'𝘜','V':'𝘝','W':'𝘞','X':'𝘟','Y':'𝘠','Z':'𝘡'},
   script: {'a':'𝓪','b':'𝓫','c':'𝓬','d':'𝓭','e':'𝓮','f':'𝓯','g':'𝓰','h':'𝓱','i':'𝓲','j':'𝓳','k':'𝓴','l':'𝓵','m':'𝓶','n':'𝓷','o':'𝓸','p':'𝓹','q':'𝓺','r':'𝓻','s':'𝓼','t':'𝓽','u':'𝓾','v':'𝓿','w':'𝔀','x':'𝔁','y':'𝔂','z':'𝔃','A':'𝓐','B':'𝓑','C':'𝓒','D':'𝓓','E':'𝓔','F':'𝓕','G':'𝓖','H':'𝓗','I':'𝓘','J':'𝓙','K':'𝓚','L':'𝓛','M':'𝓜','N':'𝓝','O':'𝓞','P':'𝓟','Q':'𝓠','R':'𝓡','S':'𝓢','T':'𝓣','U':'𝓤','V':'𝓥','W':'𝓦','X':'𝓧','Y':'𝓨','Z':'𝓩'},
   bubbled: {'a':'ⓐ','b':'ⓑ','c':'ⓒ','d':'ⓓ','e':'ⓔ','f':'ⓕ','g':'ⓖ','h':'ⓗ','i':'ⓘ','j':'ⓙ','k':'ⓚ','l':'ⓛ','m':'ⓜ','n':'ⓝ','o':'ⓞ','p':'ⓟ','q':'ⓠ','r':'ⓡ','s':'ⓢ','t':'ⓣ','u':'ⓤ','v':'ⓥ','w':'ⓦ','x':'ⓧ','y':'ⓨ','z':'ⓩ','A':'Ⓐ','B':'Ⓑ','C':'Ⓒ','D':'Ⓓ','E':'Ⓔ','F':'Ⓕ','G':'Ⓖ','H':'Ⓗ','I':'Ⓘ','J':'Ⓙ','K':'Ⓚ','L':'Ⓛ','M':'Ⓜ','N':'Ⓝ','O':'Ⓞ','P':'Ⓟ','Q':'Ⓠ','R':'Ⓡ','S':'Ⓢ','T':'Ⓣ','U':'Ⓤ','V':'Ⓥ','W':'Ⓦ','X':'Ⓧ','Y':'Ⓨ','Z':'Ⓩ'},
-  fullwidth: {'a':'ａ','b':'ｂ','c':'ｃ','d':'ｄ','e':'ｅ','f':'ｆ','g':'ｇ','h':'ｈ','i':'ｉ','j':'ｊ','k':'ｋ','l':'ｌ','m':'ｍ','n':'ｎ','o':'ｏ','p':'ｐ','q':'ｑ','r':'ｒ','s':'ｓ','t':'ｔ','u':'ｕ','v':'ｖ','w':'ｗ','x':'ｘ','y':'ｙ','z':'ｚ','A':'Ａ','B':'Ｂ','C':'Ｃ','D':'Ｄ','E':'Ｅ','F':'Ｆ','G':'Ｇ','H':'Ｈ','I':'Ｉ','J':'Ｊ','K':'Ｋ','L':'Ｌ','M':'Ｍ','N':'Ｎ','O':'Ｏ','P':'Ｐ','Q':'Ｑ','R':'Ｒ','S':'Ｓ','T':'Ｔ','U':'Ｕ','V':'Ｖ','W':'Ｗ','X':'Ｘ','Y':'Ｙ','Z':'Ｚ','0':'０','1':'１','2':'２','3':'３','4':'４','5':'５','6':'６','7':'７','8':'８','9':'９'},
-  small: {'a':'ᵃ','b':'ᵇ','c':'ᶜ','d':'ᵈ','e':'ᵉ','f':'ᶠ','g':'ᵍ','h':'ʰ','i':'ⁱ','j':'ʲ','k':'ᵏ','l':'ˡ','m':'ᵐ','n':'ⁿ','o':'ᵒ','p':'ᵖ','q':'q','r':'ʳ','s':'ˢ','t':'ᵗ','u':'ᵘ','v':'ᵛ','w':'ʷ','x':'ˣ','y':'ʸ','z':'ᶻ','A':'ᴬ','B':'ᴮ','C':'ᶜ','D':'ᴰ','E':'ᴱ','F':'ᶠ','G':'ᴳ','H':'ᴴ','I':'ᴵ','J':'ᴶ','K':'ᴷ','L':'ᴸ','M':'ᴹ','N':'ᴺ','O':'ᴼ','P':'ᴾ','Q':'Q','R':'ᴿ','S':'ˢ','T':'ᵀ','U':'ᵁ','V':'ⱽ','W':'ᵂ','X':'ˣ','Y':'ʸ','Z':'ᶻ'},
-  inverted: {'a':'ɐ','b':'q','c':'ɔ','d':'p','e':'ǝ','f':'ɟ','g':'ƃ','h':'ɥ','i':'ᴉ','j':'ɾ','k':'ʞ','l':'l','m':'ɯ','n':'u','o':'o','p':'d','q':'b','r':'ɹ','s':'s','t':'ʇ','u':'n','v':'ʌ','w':'ʍ','x':'x','y':'ʎ','z':'z','A':'∀','B':'ᗺ','C':'Ɔ','D':'ᗡ','E':'Ǝ','F':'Ⅎ','G':'⅁','H':'H','I':'I','J':'ſ','K':'⋊','L':'˥','M':'W','N':'N','O':'O','P':'Ԁ','Q':'Q','R':'ᴚ','S':'S','T':'⊥','U':'∩','V':'Λ','W':'M','X':'X','Y':'⅄','Z':'Z'}
+  fullwidth: {'a':'ａ','b':'ｂ','c':'ｃ','d':'ｄ','e':'ｅ','f':'ｆ','g':'ｇ','h':'ｈ','i':'ｉ','j':'ｊ','k':'ｋ','l':'ｌ','m':'ｍ','n':'ｎ','o':'ｏ','p':'ｐ','q':'ｑ','r':'ｒ','s':'ｓ','t':'ｔ','u':'ｕ','v':'ｖ','w':'ｗ','x':'ｘ','y':'ｙ','z':'ｚ','A':'Ａ','B':'Ｂ','C':'Ｃ','D':'Ｄ','E':'Ｅ','F':'Ｆ','G':'Ｇ','H':'Ｈ','I':'Ｉ','J':'Ｊ','K':'Ｋ','L':'Ｌ','M':'Ｍ','N':'Ｎ','O':'Ｏ','P':'Ｐ','Q':'Ｑ','R':'Ｒ','S':'Ｓ','T':'Ｔ','U':'Ｕ','V':'Ｖ','W':'Ｗ','X':'Ｘ','Y':'Ｙ','Z':'Ｚ','0':'０','1':'１','2':'２','3':'３','4':'４','5':'５','6':'６','7':'７','8':'８','9':'９'}
 }
 function styleText(text, style) {
   const map = STYLES[style]
@@ -99,54 +98,69 @@ async function main() {
       if (!msg?.message) return
 
       const from = msg.key.remoteJid
-      const isGroup = from.endsWith('@g.us')
       const sender = msg.key.participant || from
       const pushname = msg.pushName || 'Usuário'
-      const body = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || ''
+
+      // Captura também resposta de lista/botão
+      let body =
+        msg.message.conversation ||
+        msg.message.extendedTextMessage?.text ||
+        msg.message.imageMessage?.caption ||
+        msg.message.videoMessage?.caption ||
+        msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        msg.message.buttonsResponseMessage?.selectedButtonId ||
+        ''
+
+      // Resposta de interactive / nativeFlow
+      try {
+        const native = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage
+        if (native?.paramsJson) {
+          const parsed = JSON.parse(native.paramsJson)
+          if (parsed?.id) body = parsed.id
+        }
+      } catch {}
+
       if (!body) return
 
       const isCmd = body.startsWith(prefix)
-      const command = isCmd ? body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase() : ''
+      const command = isCmd ? body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase() : body.toLowerCase().replace(prefix, '')
       const args = body.trim().split(/ +/).slice(1)
       const q = args.join(' ')
 
       const reply = (t) => nawty.sendMessage(from, { text: t }, { quoted: msg })
       const reagir = (e) => nawty.sendMessage(from, { react: { text: e, key: msg.key } })
 
-      // ========== MENU ==========
+      // ========== MENU COM BOTÕES ==========
       if (['menu','help','ajuda'].includes(command)) {
-        await reply(`╭🌸───────────────🌸╮
-        *NAWTY BOT*
-╰🌸───────────────🌸╯
+        const sections = [{
+          title: 'Comandos Principais',
+          rows: [
+            { title: '🎨 Criar Figurinha', description: 'Responda uma imagem/vídeo', id: `${prefix}s` },
+            { title: '🖼️ Sticker → Imagem', description: 'Converte figurinha', id: `${prefix}toimg` },
+            { title: '✨ Estilos de Texto', description: 'Gera nicks estilizados', id: `${prefix}nick` },
+            { title: '🧮 Calculadora', description: 'Faça contas', id: `${prefix}calc` },
+            { title: '🎲 Dado', description: 'Rola um dado', id: `${prefix}dado` },
+            { title: '🏓 Ping', description: 'Teste de velocidade', id: `${prefix}ping` },
+            { title: '👑 Dono', description: 'Informações do dono', id: `${prefix}dono` },
+            { title: 'ℹ️ Info', description: 'Sobre o bot', id: `${prefix}info` }
+          ]
+        }, {
+          title: 'Diversão',
+          rows: [
+            { title: '🏳️‍🌈 Gay', description: 'Porcentagem aleatória', id: `${prefix}gay` },
+            { title: '💘 Ship', description: 'Compatibilidade', id: `${prefix}ship` },
+            { title: '🎯 Chance', description: 'Chance de algo', id: `${prefix}chance` },
+            { title: '🪙 Cara ou Coroa', description: 'Joga a moeda', id: `${prefix}cara` }
+          ]
+        }]
 
-👤 ${pushname}
-🔰 Prefixo: *${prefix}*
-
-╭─『 𝗙𝗜𝗚𝗨𝗥𝗜𝗡𝗛𝗔𝗦 』
-│ ${prefix}s / ${prefix}sticker / ${prefix}f
-│ ${prefix}toimg
-╰──────────────
-
-╭─『 𝗧𝗘𝗫𝗧𝗢 』
-│ ${prefix}nick <texto>
-│ ${prefix}say <texto>
-╰──────────────
-
-╭─『 𝗙𝗨𝗡 』
-│ ${prefix}gay @
-│ ${prefix}ship @ @
-│ ${prefix}chance <texto>
-│ ${prefix}dado
-│ ${prefix}cara
-╰──────────────
-
-╭─『 𝗨𝗧𝗜𝗟𝗦 』
-│ ${prefix}ping
-│ ${prefix}calc <expressão>
-│ ${prefix}info
-│ ${prefix}dono
-│ ${prefix}pp @
-╰──────────────`)
+        await sendButtonMenu(nawty, from, {
+          title: '🌸 NAWTY BOT',
+          text: `Olá *${pushname}*!\nEscolha uma opção no menu abaixo:`,
+          footer: 'Nawty Bot • Baileys 7',
+          sections,
+          quoted: msg
+        })
       }
 
       // ========== STICKER ==========
@@ -185,11 +199,11 @@ async function main() {
         await reagir('✅')
       }
 
-      // ========== NICK / ESTILOS ==========
+      // ========== NICK ==========
       else if (command === 'nick' || command === 'estilo') {
         if (!q) return reply(`Use: ${prefix}nick seu texto`)
         let txt = `✨ *Estilos para:* ${q}\n\n`
-        for (const [name, map] of Object.entries(STYLES)) {
+        for (const name of Object.keys(STYLES)) {
           txt += `*${name}*: ${styleText(q, name)}\n`
         }
         await reply(txt)
@@ -199,7 +213,6 @@ async function main() {
       else if (command === 'calc' || command === 'calcular') {
         if (!q) return reply(`Use: ${prefix}calc 2+2*5`)
         try {
-          // segurança básica
           if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Expressão inválida')
           const result = Function(`"use strict"; return (${q})`)()
           await reply(`🧮 *Resultado:*\n${q} = *${result}*`)
@@ -211,42 +224,35 @@ async function main() {
       // ========== FUN ==========
       else if (command === 'gay') {
         const pct = Math.floor(Math.random()*101)
-        const target = q || pushname
-        await reply(`🏳️‍🌈 *${target}* é *${pct}%* gay`)
+        await reply(`🏳️‍🌈 *${q || pushname}* é *${pct}%* gay`)
       }
       else if (command === 'ship') {
         const pct = Math.floor(Math.random()*101)
         const n1 = args[0] || pushname
         const n2 = args[1] || 'Alguém'
-        let emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : pct > 20 ? '💔' : '❌'
+        const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : '💔'
         await reply(`${emoji} *Ship*\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`)
       }
       else if (command === 'chance') {
-        if (!q) return reply(`Use: ${prefix}chance de eu ganhar na loteria`)
-        const pct = Math.floor(Math.random()*101)
-        await reply(`🎯 A chance de *${q}* é de *${pct}%*`)
+        if (!q) return reply(`Use: ${prefix}chance de eu ficar rico`)
+        await reply(`🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`)
       }
       else if (command === 'dado' || command === 'roll') {
-        const n = Math.floor(Math.random()*6)+1
-        await reply(`🎲 Você tirou: *${n}*`)
+        await reply(`🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`)
       }
       else if (command === 'cara' || command === 'coroa') {
-        const r = Math.random() > 0.5 ? 'Cara' : 'Coroa'
-        await reply(`🪙 Resultado: *${r}*`)
+        await reply(`🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`)
       }
 
-      // ========== PP (foto de perfil) ==========
+      // ========== PP ==========
       else if (command === 'pp' || command === 'perfil') {
         try {
           let jid = sender
-          if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]) {
-            jid = msg.message.extendedTextMessage.contextInfo.mentionedJid[0]
-          } else if (msg.message.extendedTextMessage?.contextInfo?.participant) {
-            jid = msg.message.extendedTextMessage.contextInfo.participant
-          }
+          const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+          if (mentioned) jid = mentioned
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
-          if (!pp) return reply('Não foi possível obter a foto de perfil.')
-          await nawty.sendMessage(from, { image: { url: pp }, caption: '📸 Foto de perfil' }, { quoted: msg })
+          if (!pp) return reply('Não foi possível obter a foto.')
+          await nawty.sendMessage(from, { image: { url: pp }, caption: '📸' }, { quoted: msg })
         } catch {
           await reply('Erro ao pegar foto de perfil.')
         }
@@ -267,7 +273,7 @@ async function main() {
         await reply(`👑 *Dono*\n${config.NomeDoDono}\n${config.NumeroDoDono}`)
       }
       else if (command === 'info') {
-        await reply(`🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nOnline ✅`)
+        await reply(`🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nBotões: Ativo ✅`)
       }
 
     } catch (e) {
@@ -275,7 +281,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Bot pronto com vários comandos!')
+  GreenLog('✅ Bot pronto com menu de botões!')
 }
 
 main()
