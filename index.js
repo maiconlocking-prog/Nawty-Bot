@@ -1,6 +1,7 @@
 /*
   NAWTY BOT - Baileys 7.0.0-rc14
   Com sistema básico de resposta
+  Agora responde também comandos enviados pela própria conta do bot
 */
 const fs = require('fs')
 const path = require('path')
@@ -29,7 +30,9 @@ async function main() {
       try {
         const msg = messages[0]
         if (!msg || !msg.message) return
-        if (msg.key.fromMe) return // ignora mensagens do próprio bot
+
+        // Agora permite mensagens fromMe (da própria conta do bot)
+        // if (msg.key.fromMe) return  ← removido
 
         const from = msg.key.remoteJid
         const isGroup = from.endsWith('@g.us')
@@ -59,7 +62,7 @@ async function main() {
 
         // ========== COMANDOS BÁSICOS ==========
         if (isCmd) {
-          console.log(colors.yellow(`[CMD] ${command} | De: ${sender}`))
+          console.log(colors.yellow(`[CMD] ${command} | De: ${sender} | fromMe: ${msg.key.fromMe}`))
 
           if (command === 'menu' || command === 'help' || command === 'ajuda') {
             await reply(`🌸 *NAWTY BOT* 🌸\n\nPrefixo: ${prefix}\n\n*Comandos disponíveis:*\n${prefix}menu\n${prefix}ping\n${prefix}dono\n${prefix}info\n\nBot atualizado com Baileys 7 + Pairing Code`)
@@ -89,7 +92,7 @@ async function main() {
       }
     })
 
-    GreenLog('✅ Bot pronto e ouvindo mensagens!')
+    GreenLog('✅ Bot pronto e ouvindo mensagens! (inclusive da própria conta)')
 
   } catch (err) {
     console.error(colors.red('Erro ao iniciar:'), err)
