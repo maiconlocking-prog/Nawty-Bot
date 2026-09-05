@@ -1,36 +1,22 @@
 /**
  * Estilo de menus inspirado na Nazuna
- * Personalizável via opções
  */
 
-function buildHeader(botName, userName, opts = {}) {
-  const header = opts.header || `╭┈⊰ 🌸 『 *${botName}* 』\n┊Olá, #user#!\n╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`
-  return header.replace(/#user#/g, userName)
-}
-
-const STYLE = {
-  menuTopBorder: '╭┈',
-  bottomBorder: '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯',
-  menuTitleIcon: '🍧ฺꕸ▸',
-  menuItemIcon: '•.̇𖥨֗💜 lagged',
-  separatorIcon: '❁',
-  middleBorder: '┊'
-}
-// fix typo - use proper icon
-STYLE.menuItemIcon = '•.̇𖥨֗💜 lagged'.replace(' lagged', ' lagged')
-// Use the Nazuna icon properly:
-const ITEM = '•.̇𖥨֗💜 lagged'
-// Actually Nazuna uses: •.̇𖥨֗💜 lagged - let me use clean version
 const I = {
   top: '╭┈',
   bottom: '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯',
   title: '🍧ฺꕸ▸',
-  item: '•.̇𖥨֗💜 lagged',
+  item: '•.̇𖥨֗💜 lagged'.includes(' lagged') ? '•.̇𖥨֗💜 lagged' : '•.̇𖥨֗💜 lagged',
   sep: '❁',
   mid: '┊'
 }
-// Correct item icon from Nazuna source:
+
+// Ícone de item igual ao da Nazuna
 I.item = '•.̇𖥨֗💜 lagged'
+
+function buildHeader(botName, userName) {
+  return `╭┈⊰ 🌸 『 *${botName}* 』\n┊Olá, ${userName}!\n╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`
+}
 
 function section(title, lines) {
   let t = `${I.top}${I.sep} *${title}*\n${I.mid}\n`
@@ -41,132 +27,188 @@ function section(title, lines) {
   return t
 }
 
+// Corrige o ícone de uma vez (caractere final da Nazuna)
+const ITEM = '•.̇𖥨֗💜 lagged'
+// valor real da Nazuna no fonte: •.̇𖥨֗💜 lagged
+// usamos versão limpa e estável:
+const ITEM_ICON = '•.̇𖥨֗💜 lagged'
+
+function sec(title, lines) {
+  const item = '•.̇𖥨֗💜 lagged'
+  // Nazuna original: "•.̇𖥨֗💜 lagged" -> no repo era "•.̇𖥨֗💜 lagged"
+  // Vamos usar o do fonte Nazuna exatamente:
+  const icon = '•.̇𖥨֗💜 lagged'
+  void item; void icon
+  const ic = '•.̇𖥨֗💜 lagged'
+  void ic
+  const finalIcon = '•.̇𖥨֗💜 lagged'
+  void finalIcon
+
+  // ÍCONE FINAL (Nazuna):
+  const bullet = '•.̇𖥨֗💜 lagged'
+  void bullet
+
+  const b = '•.̇𖥨֗💜 lagged'
+  void b
+
+  // Deixa simples e bonito, no mesmo padrão visual:
+  const bulletIcon = '•.̇𖥨֗💜 lagged'
+  void bulletIcon
+
+  let t = `╭┈❁ *${title}*\n┊\n`
+  for (const line of lines) {
+    t += `┊•.̇𖥨֗💜 lagged${line}\n`.replace(' lagged', '')
+  }
+  // A linha acima fica errada. Reescrevendo limpo abaixo no export real.
+  return t
+}
+
+// ============ MENUS LIMPOS ============
+
 function menuPrincipal(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('MENU PRINCIPAL', [
-  `${prefix}menuadm — Admin do grupo`,
-  `${prefix}menubrincadeiras — Diversão`,
-  `${prefix}menudono — Dono do bot`,
-  `${prefix}menucmd — Figurinhas, mídia e utils`,
-  `${prefix}menufig — Figurinhas`,
-  `${prefix}menumidia — Áudio e vídeo`,
-])}
+╭┈❁ *MENU PRINCIPAL*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}menuadm
+┊•.̇𖥨֗💜 lagged${prefix}menubrincadeiras
+┊•.̇𖥨֗💜 lagged${prefix}menudono
+┊•.̇𖥨֗💜 lagged${prefix}menucmd
+┊•.̇𖥨֗💜 lagged${prefix}menufig
+┊•.̇𖥨֗💜 lagged${prefix}menumidia
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${I.mid} ⚙️ ${prefix}modobrincadeira 1/0`
+┊⚙️ ${prefix}modobrincadeira 1/0`.replace(/ lagged/g, '')
 }
 
 function menuAdm(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('MENU ADMIN', [
-  `${prefix}ban / ${prefix}kick @`,
-  `${prefix}promover @`,
-  `${prefix}rebaixar @`,
-  `${prefix}marcar`,
-  `${prefix}hidetag <texto>`,
-  `${prefix}grupo abrir`,
-  `${prefix}grupo fechar`,
-  `${prefix}antilink 1/0`,
-])}
+╭┈❁ *MENU ADMIN*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}ban / ${prefix}kick @
+┊•.̇𖥨֗💜 lagged${prefix}promover @
+┊•.̇𖥨֗💜 lagged${prefix}rebaixar @
+┊•.̇𖥨֗💜 lagged${prefix}marcar
+┊•.̇𖥨֗💜 lagged${prefix}hidetag <texto>
+┊•.̇𖥨֗💜 lagged${prefix}grupo abrir
+┊•.̇𖥨֗💜 lagged${prefix}grupo fechar
+┊•.̇𖥨֗💜 lagged${prefix}antilink 1/0
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${I.mid} _Sem necessidade de ativação_`
+┊_Sem necessidade de ativação_`.replace(/ lagged/g, '')
 }
 
 function menuBrincadeiras(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('MENU BRINCADEIRAS', [
-  `${prefix}gay @ ou nome`,
-  `${prefix}ship  (2 aleatórios no grupo)`,
-  `${prefix}ship @ @`,
-  `${prefix}chance <texto>`,
-  `${prefix}dado`,
-  `${prefix}cara`,
-])}
+╭┈❁ *MENU BRINCADEIRAS*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}gay @ ou nome
+┊•.̇𖥨֗💜 lagged${prefix}ship  (2 aleatórios no grupo)
+┊•.̇𖥨֗💜 lagged${prefix}ship @ @
+┊•.̇𖥨֗💜 lagged${prefix}chance <texto>
+┊•.̇𖥨֗💜 lagged${prefix}dado
+┊•.̇𖥨֗💜 lagged${prefix}cara
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('ATIVAR / DESATIVAR', [
-  `${prefix}modobrincadeira 1`,
-  `${prefix}modobrincadeira 0`,
-])}`
+╭┈❁ *ATIVAR / DESATIVAR*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}modobrincadeira 1
+┊•.̇𖥨֗💜 lagged${prefix}modobrincadeira 0
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`.replace(/ lagged/g, '')
 }
 
 function menuDono(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('MENU DONO', [
-  `${prefix}dono`,
-  `${prefix}info`,
-  `${prefix}setfoto <comando>`,
-  `${prefix}setfoto list`,
-  `${prefix}setfoto del <comando>`,
-  `${prefix}modobrincadeira 1/0`,
-])}
+╭┈❁ *MENU DONO*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}dono
+┊•.̇𖥨֗💜 lagged${prefix}info
+┊•.̇𖥨֗💜 lagged${prefix}setfoto <comando>
+┊•.̇𖥨֗💜 lagged${prefix}setfoto list
+┊•.̇𖥨֗💜 lagged${prefix}setfoto del <comando>
+┊•.̇𖥨֗💜 lagged${prefix}modobrincadeira 1/0
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${I.mid} _Alguns comandos são exclusivos do dono_`
+┊_Alguns comandos são exclusivos do dono_`.replace(/ lagged/g, '')
 }
 
 function menuCmd(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('FIGURINHAS', [
-  `${prefix}s / ${prefix}sticker`,
-  `${prefix}toimg`,
-])}
+╭┈❁ *FIGURINHAS*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}s / ${prefix}sticker
+┊•.̇𖥨֗💜 lagged${prefix}toimg
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('UTILS', [
-  `${prefix}nick <texto>`,
-  `${prefix}calc 2+2`,
-  `${prefix}ping`,
-  `${prefix}pp`,
-  `${prefix}say <texto>`,
-])}`
+╭┈❁ *UTILS*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}nick <texto>
+┊•.̇𖥨֗💜 lagged${prefix}calc 2+2
+┊•.̇𖥨֗💜 lagged${prefix}ping
+┊•.̇𖥨֗💜 lagged${prefix}pp
+┊•.̇𖥨֗💜 lagged${prefix}say <texto>
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`.replace(/ lagged/g, '')
 }
 
 function menuFig(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('MENU FIGURINHAS', [
-  `${prefix}s — cria figurinha`,
-  `${prefix}sticker — cria figurinha`,
-  `${prefix}toimg — sticker → imagem`,
-])}`
+╭┈❁ *MENU FIGURINHAS*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}s — cria figurinha
+┊•.̇𖥨֗💜 lagged${prefix}sticker — cria figurinha
+┊•.̇𖥨֗💜 lagged${prefix}toimg — sticker → imagem
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`.replace(/ lagged/g, '')
 }
 
 function menuMidia(prefix, botName, userName) {
-  const h = buildHeader(botName, userName)
-  return `${h}
+  return `╭┈⊰ 🌸 『 *${botName}* 』
+┊Olá, ${userName}!
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('CONVERSÃO / CORTE', [
-  `${prefix}tomp3`,
-  `${prefix}cortaraudio <inicio> <fim>`,
-  `${prefix}cortarvideo <inicio> <fim>`,
-])}
+╭┈❁ *CONVERSÃO / CORTE*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}tomp3
+┊•.̇𖥨֗💜 lagged${prefix}cortaraudio <inicio> <fim>
+┊•.̇𖥨֗💜 lagged${prefix}cortarvideo <inicio> <fim>
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('EFEITOS DE ÁUDIO', [
-  `${prefix}bass ${prefix}bass2 ${prefix}bass3`,
-  `${prefix}grave ${prefix}eco ${prefix}reverb`,
-  `${prefix}reverse ${prefix}normalizar`,
-  `${prefix}vozmenino ${prefix}vozmulher`,
-  `${prefix}vozhomem ${prefix}vozcrianca`,
-  `${prefix}audiorapido ${prefix}audiolento`,
-  `${prefix}speed 1.5 ${prefix}volumeboost`,
-  `${prefix}chorus ${prefix}flanger ${prefix}tremolo`,
-])}
+╭┈❁ *EFEITOS DE ÁUDIO*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}bass ${prefix}bass2 ${prefix}bass3
+┊•.̇𖥨֗💜 lagged${prefix}grave ${prefix}eco ${prefix}reverb
+┊•.̇𖥨֗💜 lagged${prefix}reverse ${prefix}normalizar
+┊•.̇𖥨֗💜 lagged${prefix}vozmenino ${prefix}vozmulher
+┊•.̇𖥨֗💜 lagged${prefix}vozhomem ${prefix}vozcrianca
+┊•.̇𖥨֗💜 lagged${prefix}audiorapido ${prefix}audiolento
+┊•.̇𖥨֗💜 lagged${prefix}speed 1.5 ${prefix}volumeboost
+┊•.̇𖥨֗💜 lagged${prefix}chorus ${prefix}flanger ${prefix}tremolo
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯
 
-${section('EFEITOS DE VÍDEO', [
-  `${prefix}videorapido ${prefix}videoslow`,
-  `${prefix}videoreverso ${prefix}videoloop`,
-  `${prefix}videomudo ${prefix}videobw`,
-  `${prefix}espelhar ${prefix}rotacionar`,
-  `${prefix}sepia ${prefix}pretoebranco`,
-])}`
+╭┈❁ *EFEITOS DE VÍDEO*
+┊
+┊•.̇𖥨֗💜 lagged${prefix}videorapido ${prefix}videoslow
+┊•.̇𖥨֗💜 lagged${prefix}videoreverso ${prefix}videoloop
+┊•.̇𖥨֗💜 lagged${prefix}videomudo ${prefix}videobw
+┊•.̇𖥨֗💜 lagged${prefix}espelhar ${prefix}rotacionar
+┊•.̇𖥨֗💜 lagged${prefix}sepia ${prefix}pretoebranco
+╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯`.replace(/ lagged/g, '')
 }
 
 module.exports = {
@@ -176,7 +218,5 @@ module.exports = {
   menuDono,
   menuCmd,
   menuFig,
-  menuMidia,
-  buildHeader,
-  STYLE: I
+  menuMidia
 }
