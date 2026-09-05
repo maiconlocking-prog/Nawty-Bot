@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  setfoto unificado (um só comando)
+  setfoto + tomp3 + efeitos de áudio/vídeo
 */
 const fs = require('fs')
 const path = require('path')
@@ -8,6 +8,15 @@ const colors = require('colors')
 const ffmpeg = require('fluent-ffmpeg')
 const webp = require('node-webpmux')
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys')
+const {
+  applyAudioEffect,
+  applyVideoEffect,
+  cutAudio,
+  cutVideo,
+  toMp3,
+  audioFilters,
+  videoFilters
+} = require('./arquivos/js/mediaEffects.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -92,6 +101,24 @@ async function replyWithFoto(sock, from, cmdName, texto, quotedMsg) {
   }
 }
 
+function getQuotedMedia(msg) {
+  const q = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
+  if (!q) return null
+  if (q.audioMessage) return { msg: q.audioMessage, type: 'audio', isVideo: false }
+  if (q.videoMessage) return { msg: q.videoMessage, type: 'video', isVideo: true }
+  if (q.imageMessage) return { msg: q.imageMessage, type: 'image', isVideo: false }
+  if (q.documentMessage) return { msg: q.documentMessage, type: 'document', isVideo: false }
+  if (q.stickerMessage) return { msg: q.stickerMessage, type: 'sticker', isVideo: false }
+  return null
+}
+
+function getOwnMedia(msg) {
+  if (msg.message.audioMessage) return { msg: msg.message.audioMessage, type: 'audio', isVideo: false }
+  if (msg.message.videoMessage) return { msg: msg.message.videoMessage, type: 'video', isVideo: true }
+  if (msg.message.imageMessage) return { msg: msg.message.imageMessage, type: 'image', isVideo: false }
+  return null
+}
+
 const STYLES = {
   bold: {'a':'𝐚','b':'𝐛','c':'𝐜','d':'𝐝','e':'𝐞','f':'𝐟','g':'𝐠','h':'𝐡','i':'𝐢','j':'𝐣','k':'𝐤','l':'𝐥','m':'𝐦','n':'𝐧','o':'𝐨','p':'𝐩','q':'𝐪','r':'𝐫','s':'𝐬','t':'𝐭','u':'𝐮','v':'𝐯','w':'𝐰','x':'𝐱','y':'𝐲','z':'𝐳','A':'𝐀','B':'𝐁','C':'𝐂','D':'𝐃','E':'𝐄','F':'𝐅','G':'𝐆','H':'𝐇','I':'𝐈','J':'𝐉','K':'𝐊','L':'𝐋','M':'𝐌','N':'𝐍','O':'𝐎','P':'𝐏','Q':'𝐐','R':'𝐑','S':'𝐒','T':'𝐓','U':'𝐔','V':'𝐕','W':'𝐖','X':'𝐗','Y':'𝐘','Z':'𝐙','0':'𝟎','1':'𝟏','2':'𝟐','3':'𝟑','4':'𝟒','5':'𝟓','6':'𝟔','7':'𝟕','8':'𝟖','9':'𝟗'},
   italic: {'a':'𝘢','b':'𝘣','c':'𝘤','d':'𝘥','e':'𝘦','f':'𝘧','g':'𝘨','h':'𝘩','i':'𝘪','j':'𝘫','k':'𝘬','l':'𝘭','m':'𝘮','n':'𝘯','o':'𝘰','p':'𝘱','q':'𝘲','r':'𝘳','s':'𝘴','t':'𝘵','u':'𝘶','v':'𝘷','w':'𝘸','x':'𝘹','y':'𝘺','z':'𝘻','A':'𝘈','B':'𝘉','C':'𝘊','D':'𝘋','E':'𝘌','F':'𝘍','G':'𝘎','H':'𝘏','I':'𝘐','J':'𝘑','K':'𝘒','L':'𝘓','M':'𝘔','N':'𝘕','O':'𝘖','P':'𝘗','Q':'𝘘','R':'𝘙','S':'𝘚','T':'𝘛','U':'𝘜','V':'𝘝','W':'𝘞','X':'𝘟','Y':'𝘠','Z':'𝘡'},
@@ -104,22 +131,16 @@ function styleText(text, style) {
   if (!map) return text
   return [...text].map(c => map[c] || c).join('')
 }
-
-// tenta descobrir o nome do comando a partir de um texto citado
 function detectCmdFromText(text) {
   if (!text) return null
-  // procura ¥comando ou /comando no texto
   const re = new RegExp(`[${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/!]([a-zA-Z0-9_]+)`, 'i')
   const m = text.match(re)
   if (m) return m[1].toLowerCase()
-  // nomes comuns soltos
-  const known = ['menu','gay','ship','ping','dado','cara','nick','info','dono','chance','calc']
-  const lower = text.toLowerCase()
-  for (const k of known) {
-    if (lower.includes(k)) return k
-  }
   return null
 }
+
+const AUDIO_CMDS = Object.keys(audioFilters).concat(['bassbn','bassn','speed','velocidade','cortaraudio','reverse','audioreverso'])
+const VIDEO_CMDS = Object.keys(videoFilters).concat(['videoloop','cortarvideo'])
 
 async function main() {
   console.log(colors.cyan('🌸 Iniciando Nawty Bot...'))
@@ -140,10 +161,10 @@ async function main() {
         msg.message.extendedTextMessage?.text ||
         msg.message.imageMessage?.caption ||
         msg.message.videoMessage?.caption ||
+        msg.message.audioMessage?.caption ||
         ''
 
-      if (!body) return
-      if (!body.startsWith(prefix)) return
+      if (!body || !body.startsWith(prefix)) return
 
       const command = body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase()
       const args = body.trim().split(/ +/).slice(1)
@@ -152,22 +173,125 @@ async function main() {
       const reply = async (t) => nawty.sendMessage(from, { text: t }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
 
-      // ========== SETFOTO (ÚNICO COMANDO) ==========
+      // ========== TOMP3 ==========
+      if (command === 'tomp3') {
+        const media = getQuotedMedia(msg) || getOwnMedia(msg)
+        if (!media || (media.type !== 'video' && media.type !== 'audio')) {
+          return reply(`❌ Responda um *vídeo* ou *áudio* com ${prefix}tomp3`)
+        }
+        try {
+          await reagir('⏳')
+          const buf = await getBuffer(media.msg, media.type)
+          const mp3 = await toMp3(buf, media.type === 'video')
+          await nawty.sendMessage(from, { audio: mp3, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg })
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro no tomp3. Precisa do ffmpeg: pkg install ffmpeg')
+          await reagir('❌')
+        }
+        return
+      }
+
+      // ========== CORTAR ÁUDIO ==========
+      if (command === 'cortaraudio') {
+        if (args.length < 2) return reply(`Use: ${prefix}cortaraudio <inicio> <fim>\nEx: ${prefix}cortaraudio 5 20`)
+        const media = getQuotedMedia(msg)
+        if (!media || media.type !== 'audio') return reply('❌ Responda um *áudio*')
+        try {
+          await reagir('⏳')
+          const buf = await getBuffer(media.msg, 'audio')
+          const out = await cutAudio(buf, args[0], args[1])
+          await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg' }, { quoted: msg })
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro ao cortar áudio')
+        }
+        return
+      }
+
+      // ========== CORTAR VÍDEO ==========
+      if (command === 'cortarvideo') {
+        if (args.length < 2) return reply(`Use: ${prefix}cortarvideo <inicio> <fim>\nEx: ${prefix}cortarvideo 0 10`)
+        const media = getQuotedMedia(msg)
+        if (!media || media.type !== 'video') return reply('❌ Responda um *vídeo*')
+        try {
+          await reagir('⏳')
+          const buf = await getBuffer(media.msg, 'video')
+          const out = await cutVideo(buf, args[0], args[1])
+          await nawty.sendMessage(from, { video: out, caption: '✂️ Cortado' }, { quoted: msg })
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro ao cortar vídeo')
+        }
+        return
+      }
+
+      // ========== EFEITOS DE ÁUDIO ==========
+      if (AUDIO_CMDS.includes(command) || command === 'reverse' || command === 'audioreverso') {
+        const media = getQuotedMedia(msg)
+        if (!media || (media.type !== 'audio' && media.type !== 'video')) {
+          return reply(`❌ Responda um *áudio* (ou vídeo) com ${prefix}${command}`)
+        }
+        try {
+          await reagir('⏳')
+          const buf = await getBuffer(media.msg, media.type)
+          // se for vídeo, extrai áudio primeiro
+          let audioBuf = buf
+          if (media.type === 'video') audioBuf = await toMp3(buf, true)
+
+          let effect = command
+          if (command === 'reverse' || command === 'audioreverso') effect = 'reverse'
+
+          const extra = {}
+          if (effect === 'bassbn' || effect === 'bassn') extra.gain = args[0]
+          if (effect === 'speed' || effect === 'velocidade') extra.speed = args[0]
+
+          const out = await applyAudioEffect(audioBuf, effect, extra)
+          await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg })
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro no efeito. Instale: pkg install ffmpeg')
+          await reagir('❌')
+        }
+        return
+      }
+
+      // ========== EFEITOS DE VÍDEO ==========
+      if (VIDEO_CMDS.includes(command)) {
+        const media = getQuotedMedia(msg)
+        if (!media || media.type !== 'video') {
+          return reply(`❌ Responda um *vídeo* com ${prefix}${command}`)
+        }
+        try {
+          await reagir('⏳')
+          const buf = await getBuffer(media.msg, 'video')
+          const out = await applyVideoEffect(buf, command)
+          await nawty.sendMessage(from, { video: out, caption: `🎬 ${command}` }, { quoted: msg })
+          await reagir('✅')
+        } catch (e) {
+          console.error(e)
+          await reply('❌ Erro no efeito de vídeo. Instale: pkg install ffmpeg')
+          await reagir('❌')
+        }
+        return
+      }
+
+      // ========== SETFOTO ==========
       if (command === 'setfoto') {
         const sub = (args[0] || '').toLowerCase()
-
-        // ¥setfoto list
         if (sub === 'list' || sub === 'lista') {
           const fotos = loadFotos()
           const keys = Object.keys(fotos)
-          if (!keys.length) return reply('Nenhuma foto configurada.\nUse: ' + prefix + 'setfoto menu')
-          let txt = '📸 *Fotos configuradas:*\n\n'
+          if (!keys.length) return reply('Nenhuma foto configurada.')
+          let txt = '📸 *Fotos:*\n\n'
           keys.forEach(k => txt += `• ${prefix}${k}\n`)
           return reply(txt)
         }
-
-        // ¥setfoto del menu  |  ¥setfoto remover menu
-        if (sub === 'del' || sub === 'delete' || sub === 'remover' || sub === 'rm') {
+        if (['del','delete','remover','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase().replace(prefix, '')
           if (!cmdName) return reply(`Use: ${prefix}setfoto del menu`)
           const fotos = loadFotos()
@@ -177,37 +301,21 @@ async function main() {
           saveFotos(fotos)
           return reply(`🗑️ Foto de *${prefix}${cmdName}* removida.`)
         }
-
-        // Descobrir o nome do comando
         let cmdName = (args[0] || '').toLowerCase().replace(prefix, '').trim()
-
-        // Se não passou nome, tenta detectar da mensagem citada
-        if (!cmdName || ['del','list','lista','delete','remover','rm'].includes(cmdName)) {
-          const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-          const quotedText =
-            quoted?.conversation ||
-            quoted?.extendedTextMessage?.text ||
-            quoted?.imageMessage?.caption ||
-            ''
-          const detected = detectCmdFromText(quotedText)
-          if (detected) cmdName = detected
-        }
-
         if (!cmdName) {
-          return reply(`📸 *SETFOTO* (um só comando)\n\n*Definir foto:*\nEnvie/marque uma imagem e use:\n${prefix}setfoto menu\n${prefix}setfoto gay\n\n*Ou responda a um comando* (ex: resposta do ¥gay) com a imagem + ${prefix}setfoto\n\n*Listar:*\n${prefix}setfoto list\n\n*Remover:*\n${prefix}setfoto del menu`)
+          const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
+          const qt = quoted?.conversation || quoted?.extendedTextMessage?.text || ''
+          cmdName = detectCmdFromText(qt) || ''
         }
-
-        // Pegar a imagem
+        if (!cmdName) {
+          return reply(`📸 *SETFOTO*\n\n${prefix}setfoto menu\n${prefix}setfoto list\n${prefix}setfoto del menu`)
+        }
         let media = null
         if (msg.message.imageMessage) media = msg.message.imageMessage
         else if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
           media = msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage
         }
-
-        if (!media) {
-          return reply(`❌ Envie ou marque uma *imagem* com:\n${prefix}setfoto ${cmdName}`)
-        }
-
+        if (!media) return reply(`❌ Marque uma imagem com ${prefix}setfoto ${cmdName}`)
         try {
           await reagir('⏳')
           const buffer = await getBuffer(media, 'image')
@@ -216,12 +324,10 @@ async function main() {
           const fotos = loadFotos()
           fotos[cmdName] = filePath
           saveFotos(fotos)
-          await reply(`✅ Foto definida para *${prefix}${cmdName}*\n\nAgora ${prefix}${cmdName} vai com essa imagem.`)
+          await reply(`✅ Foto definida para *${prefix}${cmdName}*`)
           await reagir('✅')
         } catch (e) {
-          console.error(e)
           await reply('❌ Erro ao salvar a foto.')
-          await reagir('❌')
         }
         return
       }
@@ -236,35 +342,38 @@ async function main() {
 🔰 Prefixo: *${prefix}*
 
 ╭─『 FIGURINHAS 』
-│ ${prefix}s / ${prefix}sticker
-│ ${prefix}toimg
+│ ${prefix}s  ${prefix}toimg
 ╰──────────────
 
-╭─『 TEXTO 』
-│ ${prefix}nick <texto>
-│ ${prefix}say <texto>
+╭─『 MÍDIA 』
+│ ${prefix}tomp3
+│ ${prefix}cortaraudio 5 20
+│ ${prefix}cortarvideo 0 10
 ╰──────────────
 
-╭─『 DIVERSÃO 』
-│ ${prefix}gay
-│ ${prefix}ship
-│ ${prefix}chance <texto>
-│ ${prefix}dado
-│ ${prefix}cara
+╭─『 ÁUDIO 』
+│ ${prefix}bass ${prefix}bass2 ${prefix}bass3
+│ ${prefix}grave ${prefix}eco ${prefix}reverb
+│ ${prefix}reverse ${prefix}normalizar
+│ ${prefix}vozmenino ${prefix}vozmulher
+│ ${prefix}vozhomem ${prefix}vozcrianca
+│ ${prefix}audiorapido ${prefix}audiolento
+│ ${prefix}speed 1.5 ${prefix}volumeboost
+│ ${prefix}chorus ${prefix}flanger ${prefix}tremolo
 ╰──────────────
 
-╭─『 FOTOS 』
-│ ${prefix}setfoto <comando>
-│ ${prefix}setfoto list
-│ ${prefix}setfoto del <comando>
+╭─『 VÍDEO 』
+│ ${prefix}videorapido ${prefix}videoslow
+│ ${prefix}videoreverso ${prefix}videoloop
+│ ${prefix}videomudo ${prefix}videobw
+│ ${prefix}espelhar ${prefix}rotacionar
+│ ${prefix}sepia ${prefix}pretoebranco
 ╰──────────────
 
-╭─『 UTILS 』
-│ ${prefix}ping
-│ ${prefix}calc 2+2
-│ ${prefix}pp
-│ ${prefix}info
-│ ${prefix}dono
+╭─『 OUTROS 』
+│ ${prefix}nick ${prefix}gay ${prefix}ship
+│ ${prefix}dado ${prefix}calc ${prefix}ping
+│ ${prefix}setfoto ${prefix}info ${prefix}dono
 ╰──────────────`
         await replyWithFoto(nawty, from, 'menu', menu, msg)
         return
@@ -281,105 +390,95 @@ async function main() {
           else if (quoted?.stickerMessage) { media=quoted.stickerMessage; isVideo=false }
           else if (msg.message.imageMessage) { media=msg.message.imageMessage; isVideo=false }
           else if (msg.message.videoMessage) { media=msg.message.videoMessage; isVideo=true }
-          if (!media) return reply(`❌ Responda uma imagem/vídeo com ${prefix}s`)
+          if (!media) return reply(`❌ Responda imagem/vídeo com ${prefix}s`)
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
           webpBuf = await writeExif(webpBuf, config.NomeDoBot||'Nawty', config.NomeDoDono||'Nawty')
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
         } catch(e) {
-          console.error(e)
-          await reply('❌ Erro ao criar figurinha.')
-          await reagir('❌')
+          await reply('❌ Erro na figurinha')
         }
         return
       }
 
       if (command === 'toimg') {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply(`Responda um sticker com ${prefix}toimg`)
+        if (!quoted?.stickerMessage) return reply(`Responda sticker com ${prefix}toimg`)
         await reagir('⏳')
         try {
           const buf = await getBuffer(quoted.stickerMessage, 'sticker')
           await nawty.sendMessage(from, { image: buf, caption: '✅' }, { quoted: msg })
           await reagir('✅')
-        } catch { await reply('Erro ao converter') }
+        } catch { await reply('Erro') }
         return
       }
 
       if (command === 'nick' || command === 'estilo') {
-        if (!q) return reply(`Use: ${prefix}nick seu texto`)
-        let txt = `✨ *Estilos para:* ${q}\n\n`
+        if (!q) return reply(`Use: ${prefix}nick texto`)
+        let txt = `✨ *Estilos:* ${q}\n\n`
         for (const name of Object.keys(STYLES)) txt += `*${name}*: ${styleText(q, name)}\n`
         await replyWithFoto(nawty, from, 'nick', txt, msg)
         return
       }
 
-      if (command === 'calc' || command === 'calcular') {
-        if (!q) return reply(`Use: ${prefix}calc 2+2*5`)
+      if (command === 'calc') {
+        if (!q) return reply(`Use: ${prefix}calc 2+2`)
         try {
-          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Expressão inválida')
-          const result = Function(`"use strict"; return (${q})`)()
-          await reply(`🧮 *Resultado:*\n${q} = *${result}*`)
-        } catch { await reply('Erro no cálculo') }
+          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Inválido')
+          await reply(`🧮 ${q} = *${Function(`"use strict"; return (${q})`)()}*`)
+        } catch { await reply('Erro') }
         return
       }
 
       if (command === 'gay') {
-        await replyWithFoto(nawty, from, 'gay', `🏳️‍🌈 *${q || pushname}* é *${Math.floor(Math.random()*101)}%* gay`, msg)
+        await replyWithFoto(nawty, from, 'gay', `🏳️‍🌈 *${q||pushname}* é *${Math.floor(Math.random()*101)}%* gay`, msg)
         return
       }
       if (command === 'ship') {
         const pct = Math.floor(Math.random()*101)
-        const n1 = args[0] || pushname
-        const n2 = args[1] || 'Alguém'
-        const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : '💔'
-        await replyWithFoto(nawty, from, 'ship', `${emoji} *Ship*\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`, msg)
+        const emoji = pct>80?'💘':pct>50?'❤️':'💔'
+        await replyWithFoto(nawty, from, 'ship', `${emoji} ${(args[0]||pushname)} + ${(args[1]||'Alguém')} = *${pct}%*`, msg)
         return
       }
       if (command === 'chance') {
-        if (!q) return reply(`Use: ${prefix}chance de eu ficar rico`)
-        await replyWithFoto(nawty, from, 'chance', `🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`, msg)
+        if (!q) return reply(`Use: ${prefix}chance ...`)
+        await replyWithFoto(nawty, from, 'chance', `🎯 *${q}* → *${Math.floor(Math.random()*101)}%*`, msg)
         return
       }
       if (command === 'dado' || command === 'roll') {
-        await replyWithFoto(nawty, from, 'dado', `🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`, msg)
+        await replyWithFoto(nawty, from, 'dado', `🎲 *${Math.floor(Math.random()*6)+1}*`, msg)
         return
       }
       if (command === 'cara' || command === 'coroa') {
-        await replyWithFoto(nawty, from, 'cara', `🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`, msg)
+        await replyWithFoto(nawty, from, 'cara', `🪙 *${Math.random()>0.5?'Cara':'Coroa'}*`, msg)
         return
       }
-
       if (command === 'pp' || command === 'perfil') {
         try {
-          let jid = sender
-          const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-          if (mentioned) jid = mentioned
+          let jid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || sender
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
-          if (!pp) return reply('Não foi possível obter a foto.')
+          if (!pp) return reply('Sem foto')
           await nawty.sendMessage(from, { image: { url: pp }, caption: '📸' }, { quoted: msg })
-        } catch { await reply('Erro ao pegar foto de perfil.') }
+        } catch { await reply('Erro') }
         return
       }
-
       if (command === 'say') {
         if (!q) return reply(`Use: ${prefix}say texto`)
         await nawty.sendMessage(from, { text: q })
         return
       }
-
       if (command === 'ping') {
         const t = Date.now()
-        await replyWithFoto(nawty, from, 'ping', `🏓 Pong!\n⏱️ ${Date.now()-t}ms`, msg)
+        await replyWithFoto(nawty, from, 'ping', `🏓 ${Date.now()-t}ms`, msg)
         return
       }
       if (command === 'dono') {
-        await replyWithFoto(nawty, from, 'dono', `👑 *Dono*\n${config.NomeDoDono}\n${config.NumeroDoDono}`, msg)
+        await replyWithFoto(nawty, from, 'dono', `👑 ${config.NomeDoDono}\n${config.NumeroDoDono}`, msg)
         return
       }
       if (command === 'info') {
-        await replyWithFoto(nawty, from, 'info', `🤖 *${config.NomeDoBot}*\nPrefixo: ${prefix}\nBaileys 7\nOnline ✅`, msg)
+        await replyWithFoto(nawty, from, 'info', `🤖 ${config.NomeDoBot}\nPrefixo: ${prefix}\nOnline ✅`, msg)
         return
       }
 
@@ -388,7 +487,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Bot pronto! setfoto unificado.')
+  GreenLog('✅ Bot pronto! tomp3 + efeitos ativos.')
 }
 
 main()
