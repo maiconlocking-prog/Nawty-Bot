@@ -40,12 +40,17 @@ function saveConfig(cfg) {
   saveJson(CONFIG_PATH, cfg)
 }
 
-function isOwnerSender(sender, config) {
-  if (isCriador(sender)) return true
-  const numDono = onlyDigits(config?.NumeroDoDono || '')
-  const n = onlyDigits(String(sender || '').split('@')[0].split(':')[0])
-  if (!numDono || !n) return false
-  return n === numDono || n.endsWith(numDono) || numDono.endsWith(n)
+function isOwnerSender(sender, config, msg) {
+  try {
+    const { isOwnerOrCriador } = require('./ownerCheck.js')
+    return isOwnerOrCriador(sender, config, msg)
+  } catch {
+    if (isCriador(sender, msg)) return true
+    const numDono = onlyDigits(config?.NumeroDoDono || '')
+    const n = onlyDigits(String(sender || '').split('@')[0].split(':')[0])
+    if (!numDono || !n) return false
+    return n === numDono || n.endsWith(numDono) || numDono.endsWith(n)
+  }
 }
 
 function loadList(p) {
@@ -72,7 +77,6 @@ function resolveTarget(msg, args) {
     const d = onlyDigits(a)
     if (d.length >= 8) return d + '@s.whatsapp.net'
   }
-  // quoted participant
   const p = msg.message?.extendedTextMessage?.contextInfo?.participant
   if (p) return p
   return null
@@ -88,8 +92,7 @@ async function handleDono(ctx) {
     prefix, reply, sock, config, isOwner
   } = ctx
 
-  const owner = isOwner || isOwnerSender(sender, config)
-  // comandos que checam block/bangp fora — aqui só dono
+  const owner = isOwner || isOwnerSender(sender, config, msg)
 
   const donoCmds = new Set([
     'prefixo', 'numerodono', 'nomedono', 'nomebot',
@@ -111,7 +114,6 @@ async function handleDono(ctx) {
     return true
   }
 
-  // —— CONFIG ——
   if (command === 'prefixo') {
     const novo = (args[0] || '').trim()
     if (!novo || novo.length > 3) {
@@ -185,7 +187,6 @@ async function handleDono(ctx) {
     return true
   }
 
-  // —— BLOQUEIOS ——
   if (command === 'blockuserg') {
     const t = resolveTarget(msg, args)
     if (!t) { await reply(prefix + 'blockuserg @user'); return true }
@@ -265,7 +266,6 @@ async function handleDono(ctx) {
     return true
   }
 
-  // —— TRANSMISSÃO ——
   if (command === 'tm' || command === 'tm2' || command === 'divulgar' || command === 'divdono') {
     if (!q) {
       await reply(box('TRANSMISSÃO', ['Use: ' + prefix + 'tm <mensagem>', 'Envia para todos os grupos do bot.']))
@@ -279,16 +279,16 @@ async function handleDono(ctx) {
       await reply('❌ Não foi possível listar grupos.')
       return true
     }
-    let ok = 0, fail = 0
+    let okc = 0, fail = 0
     await reply('📡 Enviando para *' + groups.length + '* grupos...')
     for (const g of groups) {
       try {
         await sock.sendMessage(g, { text: '📢 *Comunicado*\n\n' + q })
-        ok++
+        okc++
         await new Promise(r => setTimeout(r, 800))
       } catch { fail++ }
     }
-    await reply('✅ Enviados: *' + ok + '*\n❌ Falhas: *' + fail + '*')
+    await reply('✅ Enviados: *' + okc + '*\n❌ Falhas: *' + fail + '*')
     return true
   }
 
@@ -305,7 +305,6 @@ async function handleDono(ctx) {
     return true
   }
 
-  // —— CONTROLE ——
   if (command === 'entrar') {
     const link = q || args[0] || ''
     const code = link.replace('https://chat.whatsapp.com/', '').replace('http://chat.whatsapp.com/', '').trim()
@@ -365,7 +364,6 @@ async function handleDono(ctx) {
     return true
   }
 
-  // —— LIMPEZA ——
   if (command === 'limpardb') {
     if ((args[0] || '').toLowerCase() !== 'confirmar') {
       await reply('⚠️ Apaga dados de ranks/atividade.\n' + prefix + 'limpardb confirmar')
@@ -384,21 +382,19 @@ async function handleDono(ctx) {
     return true
   }
 
-  // aliases VIP estilo Nazuna
   if (command === 'addpremium') {
     const { handleRpg } = require('./rpg.js')
-    return handleRpg({ ...ctx, command: 'addvip' })
+    return handleRpg({ ...ctx, command: 'addvip', isOwner: true })
   }
   if (command === 'delpremium') {
     const { handleRpg } = require('./rpg.js')
-    return handleRpg({ ...ctx, command: 'delvip' })
+    return handleRpg({ ...ctx, command: 'delvip', isOwner: true })
   }
   if (command === 'listprem') {
     const { handleRpg } = require('./rpg.js')
-    return handleRpg({ ...ctx, command: 'listvip' })
+    return handleRpg({ ...ctx, command: 'listvip', isOwner: true })
   }
 
-  // nopref aliases → semprefixo
   if (command === 'listnopref') {
     const { listAliases } = require('./semprefixo.js')
     const map = listAliases()
