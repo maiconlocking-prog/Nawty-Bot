@@ -1,5 +1,6 @@
 /**
  * Sistema RPG + VIP (inspirado na Nazuna) — offline, JSON
+ * Salvamento automático a cada ação (escrita atômica)
  */
 const fs = require('fs')
 const path = require('path')
@@ -15,11 +16,19 @@ if (!fs.existsSync(VIP_PATH)) fs.writeFileSync(VIP_PATH, '{}')
 function loadRPG() {
   try { return JSON.parse(fs.readFileSync(RPG_PATH)) } catch { return {} }
 }
-function saveRPG(d) { fs.writeFileSync(RPG_PATH, JSON.stringify(d, null, 2)) }
+function saveRPG(d) {
+  const tmp = RPG_PATH + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(d, null, 2))
+  fs.renameSync(tmp, RPG_PATH)
+}
 function loadVIP() {
   try { return JSON.parse(fs.readFileSync(VIP_PATH)) } catch { return {} }
 }
-function saveVIP(d) { fs.writeFileSync(VIP_PATH, JSON.stringify(d, null, 2)) }
+function saveVIP(d) {
+  const tmp = VIP_PATH + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(d, null, 2))
+  fs.renameSync(tmp, VIP_PATH)
+}
 
 function uid(jid) {
   return String(jid || '').split('@')[0].split(':')[0]
@@ -198,7 +207,6 @@ function vipMenuText(prefix, isUserVip) {
   ].join('\n')
 }
 
-/** Handler principal dos comandos RPG/VIP */
 async function handleRpg({
   command, args, q, sender, pushname, from, isGroup, msg,
   prefix, reply, sock, isOwner
@@ -207,7 +215,6 @@ async function handleRpg({
   const vip = isVip(sender)
   const now = Date.now()
 
-  // menus
   if (command === 'menurpg' || command === 'rpg') {
     const { menuRpg } = require('./menus.js')
     await reply(menuRpg(prefix, 'NAWTY BOT', pushname))
@@ -428,7 +435,6 @@ async function handleRpg({
     return true
   }
 
-  // VIP
   if (command === 'vip') {
     const info = getVipInfo(sender)
     if (!vip) {
