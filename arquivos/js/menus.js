@@ -33,6 +33,7 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menubrincadeiras',
       prefix + 'menudono',
       prefix + 'menucmd',
+      prefix + 'criador',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -102,6 +103,7 @@ function menuDono(prefix, botName, userName) {
   return (
     header(botName, userName) + '\n\n' +
     section('👑 DONO', [
+      prefix + 'criador  (protegido)',
       prefix + 'dono',
       prefix + 'info',
       prefix + 'setfoto <comando>',
