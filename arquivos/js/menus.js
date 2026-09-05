@@ -1,10 +1,10 @@
 /**
- * Estilo de menus inspirado na Nazuna
+ * Menus organizados — estilo Nazuna
  */
 
-function header(botName, userName) {
+function header(botName, userName, icon = '🌸') {
   return (
-    '╭┈⊰ 🌸 『 *' + botName + '* 』\n' +
+    '╭┈⊰ ' + icon + ' 『 *' + botName + '* 』\n' +
     '┊Olá, *' + userName + '*!\n' +
     '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
   )
@@ -16,11 +16,9 @@ const BOT = '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
 const SEP = '❁'
 const ITEM = '•.̇𖥨֗💜◆'
 
-function section(title, lines) {
-  let t = TOP + SEP + ' *' + title + '*\n' + MID + '\n'
-  for (const line of lines) {
-    t += MID + ITEM + line + '\n'
-  }
+function section(title, lines, sep = SEP) {
+  let t = TOP + sep + ' *' + title + '*\n' + MID + '\n'
+  for (const line of lines) t += MID + ITEM + line + '\n'
   t += BOT
   return t
 }
@@ -33,6 +31,8 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menubrincadeiras',
       prefix + 'menudono',
       prefix + 'menucmd',
+      prefix + 'menurpg',
+      prefix + 'menuvip',
       prefix + 'criador',
       prefix + 'modobrincadeira 1/0'
     ])
@@ -41,7 +41,7 @@ function menuPrincipal(prefix, botName, userName) {
 
 function menuAdm(prefix, botName, userName) {
   return (
-    header(botName, userName) + '\n\n' +
+    header(botName, userName, '🛡️') + '\n\n' +
     section('🛡️ GESTÃO', [
       prefix + 'ban @ / ' + prefix + 'kick @',
       prefix + 'promover @ / ' + prefix + 'rebaixar @',
@@ -50,94 +50,131 @@ function menuAdm(prefix, botName, userName) {
       prefix + 'grupo a/f',
       prefix + 'linkgp',
       prefix + 'del'
-    ]) + '\n\n' +
+    ], '🛡️') + '\n\n' +
     section('🔒 SEGURANÇA', [
       prefix + 'antilink 1/0',
       prefix + 'antiflood 1/0',
       prefix + 'antipalavra 1/0',
-      prefix + 'antipalavra add <palavra>',
-      prefix + 'antipalavra del <palavra>',
-      prefix + 'antipalavra list',
+      prefix + 'antipalavra add/del/list',
       prefix + 'antidoc 1/0',
       prefix + 'antiloc 1/0',
-      prefix + 'seguranca  (status)'
-    ]) + '\n\n' +
+      prefix + 'seguranca'
+    ], '🔒') + '\n\n' +
     section('📊 ATIVIDADE', [
       prefix + 'rankativo',
       prefix + 'resetativo'
-    ])
+    ], '📊')
   )
 }
 
 function menuBrincadeiras(prefix, botName, userName) {
   return (
-    header(botName, userName) + '\n\n' +
+    header(botName, userName, '🎮') + '\n\n' +
     section('🎮 BRINCADEIRAS', [
       prefix + 'gay @',
       prefix + 'ship',
       prefix + 'chance <texto>',
       prefix + 'dado',
       prefix + 'cara'
-    ]) + '\n\n' +
+    ], '🎮') + '\n\n' +
     section('🏆 RANKS', [
       prefix + 'rankativo',
-      prefix + 'rankgay',
-      prefix + 'rankcorno',
-      prefix + 'rankgado',
-      prefix + 'rankgostoso / ' + prefix + 'rankgostosa',
-      prefix + 'ranklindo / ' + prefix + 'ranklinda',
-      prefix + 'rankengracado',
-      prefix + 'rankfofoqueiro',
-      prefix + 'rankburro / ' + prefix + 'rankinteligente',
-      prefix + 'rankrico / ' + prefix + 'rankpobre',
-      prefix + 'rankromantico / ' + prefix + 'rankciumento'
-    ]) + '\n\n' +
+      prefix + 'rankgay / rankcorno / rankgado',
+      prefix + 'rankgostoso / rankgostosa',
+      prefix + 'ranklindo / ranklinda',
+      prefix + 'rankengracado / rankfofoqueiro',
+      prefix + 'rankburro / rankinteligente',
+      prefix + 'rankrico / rankpobre',
+      prefix + 'rankromantico / rankciumento'
+    ], '🏆') + '\n\n' +
     section('⚡ ATIVAÇÃO', [
-      prefix + 'modobrincadeira 1',
-      prefix + 'modobrincadeira 0'
-    ])
+      prefix + 'modobrincadeira 1/0'
+    ], '⚡')
   )
 }
 
 function menuDono(prefix, botName, userName) {
   return (
-    header(botName, userName) + '\n\n' +
+    header(botName, userName, '👑') + '\n\n' +
     section('👑 DONO', [
-      prefix + 'criador  (protegido)',
-      prefix + 'dono',
-      prefix + 'info',
-      prefix + 'setfoto <comando>',
-      prefix + 'setfoto list',
-      prefix + 'setfoto del <comando>',
+      prefix + 'criador',
+      prefix + 'dono / ' + prefix + 'info',
+      prefix + 'setfoto <cmd> | list | del',
+      prefix + 'semprefixo list/add/del',
+      prefix + 'addvip @ / ' + prefix + 'delvip @',
+      prefix + 'listvip',
       prefix + 'modobrincadeira 1/0'
-    ])
+    ], '👑')
   )
 }
 
 function menuCmd(prefix, botName, userName) {
   return (
-    header(botName, userName) + '\n\n' +
+    header(botName, userName, '🛠️') + '\n\n' +
     section('🎨 FIGURINHAS', [
-      prefix + 's / ' + prefix + 'sticker',
+      prefix + 's / sticker  (atalho: S)',
       prefix + 'toimg',
       prefix + 'rgtake Nome/Autor',
       prefix + 'rtake Nome/Autor',
-      prefix + 'take  (responde a figurinha)'
-    ]) + '\n\n' +
+      prefix + 'take  (atalho: T)'
+    ], '🎨') + '\n\n' +
     section('🎬 MÍDIA', [
       prefix + 'tomp3',
-      prefix + 'cortaraudio <i> <f>',
-      prefix + 'cortarvideo <i> <f>'
-    ]) + '\n\n' +
-    section('🔊 ÁUDIO / 🎥 VÍDEO', [
-      prefix + 'bass ' + prefix + 'grave ' + prefix + 'eco',
-      prefix + 'reverse ' + prefix + 'videorapido',
-      prefix + 'espelhar ' + prefix + 'rotacionar'
-    ]) + '\n\n' +
+      prefix + 'cortaraudio / cortarvideo',
+      prefix + 'bass grave eco reverse',
+      prefix + 'videorapido espelhar rotacionar'
+    ], '🎬') + '\n\n' +
     section('🛠️ UTILS', [
-      prefix + 'nick ' + prefix + 'calc ' + prefix + 'ping',
-      prefix + 'pp ' + prefix + 'say'
-    ])
+      prefix + 'nick / calc / ping',
+      prefix + 'pp / say',
+      prefix + 'semprefixo list'
+    ], '🛠️')
+  )
+}
+
+function menuRpg(prefix, botName, userName) {
+  return (
+    header(botName, userName, '⚔️') + '\n\n' +
+    section('👤 PERFIL', [
+      prefix + 'perfilrpg',
+      prefix + 'carteira',
+      prefix + 'inv',
+      prefix + 'toprpg'
+    ], '⚔️') + '\n\n' +
+    section('💰 ECONOMIA', [
+      prefix + 'daily',
+      prefix + 'trabalhar',
+      prefix + 'minerar',
+      prefix + 'dep <valor|all>',
+      prefix + 'sacar <valor|all>',
+      prefix + 'pix @user <valor>',
+      prefix + 'loja',
+      prefix + 'comprar <item>'
+    ], '💰') + '\n\n' +
+    section('⚔️ COMBATE', [
+      prefix + 'batalhar @user'
+    ], '⚔️') + '\n\n' +
+    section('💎 VIP', [
+      prefix + 'menuvip',
+      prefix + 'vip'
+    ], '💎')
+  )
+}
+
+function menuVip(prefix, botName, userName) {
+  return (
+    header(botName, userName, '💎') + '\n\n' +
+    section('💎 BENEFÍCIOS VIP', [
+      'Daily em dobro',
+      'Trabalhar cooldown menor',
+      'Minerar com bônus',
+      prefix + 'vip  (status)'
+    ], '💎') + '\n\n' +
+    section('👑 GESTÃO (DONO)', [
+      prefix + 'addvip @user [dias]',
+      prefix + 'delvip @user',
+      prefix + 'listvip'
+    ], '👑')
   )
 }
 
@@ -146,5 +183,7 @@ module.exports = {
   menuAdm,
   menuBrincadeiras,
   menuDono,
-  menuCmd
+  menuCmd,
+  menuRpg,
+  menuVip
 }
