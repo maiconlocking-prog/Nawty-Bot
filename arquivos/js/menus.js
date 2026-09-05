@@ -33,7 +33,6 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menubrincadeiras',
       prefix + 'menudono',
       prefix + 'menucmd',
-      prefix + 'menurank',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -42,20 +41,25 @@ function menuPrincipal(prefix, botName, userName) {
 function menuAdm(prefix, botName, userName) {
   return (
     header(botName, userName) + '\n\n' +
-    section('🛡️ GESTÃO DE USUÁRIOS', [
-      prefix + 'ban @ / kick @',
-      prefix + 'promover @',
-      prefix + 'rebaixar @'
-    ]) + '\n\n' +
-    section('💬 MARCAÇÕES', [
+    section('🛡️ GESTÃO', [
+      prefix + 'ban @ / ' + prefix + 'kick @',
+      prefix + 'promover @ / ' + prefix + 'rebaixar @',
       prefix + 'marcar <texto>',
-      prefix + 'hidetag <texto>'
-    ]) + '\n\n' +
-    section('⚙️ GRUPO', [
-      prefix + 'grupo a  (abrir)',
-      prefix + 'grupo f  (fechar)',
+      prefix + 'hidetag <texto>',
+      prefix + 'grupo a/f',
       prefix + 'linkgp',
-      prefix + 'del  (apaga msg marcada)'
+      prefix + 'del'
+    ]) + '\n\n' +
+    section('🔒 SEGURANÇA', [
+      prefix + 'antilink 1/0',
+      prefix + 'antiflood 1/0',
+      prefix + 'antipalavra 1/0',
+      prefix + 'antipalavra add <palavra>',
+      prefix + 'antipalavra del <palavra>',
+      prefix + 'antipalavra list',
+      prefix + 'antidoc 1/0',
+      prefix + 'antiloc 1/0',
+      prefix + 'seguranca  (status)'
     ]) + '\n\n' +
     section('📊 ATIVIDADE', [
       prefix + 'rankativo',
@@ -74,44 +78,22 @@ function menuBrincadeiras(prefix, botName, userName) {
       prefix + 'dado',
       prefix + 'cara'
     ]) + '\n\n' +
-    section('🏆 RANKS ALEATÓRIOS', [
+    section('🏆 RANKS', [
+      prefix + 'rankativo',
       prefix + 'rankgay',
       prefix + 'rankcorno',
       prefix + 'rankgado',
-      prefix + 'rankgostoso',
-      prefix + 'ranklindo',
-      prefix + 'rankengracado',
-      prefix + 'menurank  (lista todos)'
-    ]) + '\n\n' +
-    section('⚡ ATIVAÇÃO NO GRUPO', [
-      prefix + 'modobrincadeira 1',
-      prefix + 'modobrincadeira 0'
-    ])
-  )
-}
-
-function menuRank(prefix, botName, userName) {
-  return (
-    header(botName, userName) + '\n\n' +
-    section('📊 RANK REAL', [
-      prefix + 'rankativo  (mais ativos)',
-      prefix + 'resetativo  (admin)'
-    ]) + '\n\n' +
-    section('🎲 RANKS DE BRINCADEIRA', [
-      prefix + 'rankgay',
-      prefix + 'rankburro',
-      prefix + 'rankinteligente',
-      prefix + 'rankotaku',
-      prefix + 'rankfiel / rankinfiel',
-      prefix + 'rankcorno / rankgado',
-      prefix + 'rankgostoso / rankgostosa',
-      prefix + 'rankrico / rankpobre',
-      prefix + 'ranklindo / ranklinda',
+      prefix + 'rankgostoso / ' + prefix + 'rankgostosa',
+      prefix + 'ranklindo / ' + prefix + 'ranklinda',
       prefix + 'rankengracado',
       prefix + 'rankfofoqueiro',
-      prefix + 'rankdorminhoco',
-      prefix + 'rankromantico',
-      prefix + 'rankciumento'
+      prefix + 'rankburro / ' + prefix + 'rankinteligente',
+      prefix + 'rankrico / ' + prefix + 'rankpobre',
+      prefix + 'rankromantico / ' + prefix + 'rankciumento'
+    ]) + '\n\n' +
+    section('⚡ ATIVAÇÃO', [
+      prefix + 'modobrincadeira 1',
+      prefix + 'modobrincadeira 0'
     ])
   )
 }
@@ -142,15 +124,9 @@ function menuCmd(prefix, botName, userName) {
       prefix + 'cortaraudio <i> <f>',
       prefix + 'cortarvideo <i> <f>'
     ]) + '\n\n' +
-    section('🔊 ÁUDIO', [
+    section('🔊 ÁUDIO / 🎥 VÍDEO', [
       prefix + 'bass ' + prefix + 'grave ' + prefix + 'eco',
-      prefix + 'reverse ' + prefix + 'normalizar',
-      prefix + 'vozmenino ' + prefix + 'vozmulher',
-      prefix + 'speed 1.5'
-    ]) + '\n\n' +
-    section('🎥 VÍDEO', [
-      prefix + 'videorapido ' + prefix + 'videoslow',
-      prefix + 'videoreverso ' + prefix + 'videomudo',
+      prefix + 'reverse ' + prefix + 'videorapido',
       prefix + 'espelhar ' + prefix + 'rotacionar'
     ]) + '\n\n' +
     section('🛠️ UTILS', [
@@ -164,7 +140,6 @@ module.exports = {
   menuPrincipal,
   menuAdm,
   menuBrincadeiras,
-  menuRank,
   menuDono,
   menuCmd
 }
