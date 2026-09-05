@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  setfoto + tomp3 + efeitos de áudio/vídeo
+  + modobrincadeira / menubrincadeiras / ship aleatório em grupo
 */
 const fs = require('fs')
 const path = require('path')
@@ -26,15 +26,27 @@ let nawty = null
 const prefix = config.prefix || '¥'
 const FOTOS_PATH = path.join(__dirname, 'database/fotos.json')
 const FOTOS_DIR = path.join(__dirname, 'database/fotos')
+const BRINCADEIRA_PATH = path.join(__dirname, 'database/brincadeira.json')
 
 if (!fs.existsSync(FOTOS_DIR)) fs.mkdirSync(FOTOS_DIR, { recursive: true })
 if (!fs.existsSync(FOTOS_PATH)) fs.writeFileSync(FOTOS_PATH, '{}')
+if (!fs.existsSync(BRINCADEIRA_PATH)) fs.writeFileSync(BRINCADEIRA_PATH, '{}')
 
 function loadFotos() {
   try { return JSON.parse(fs.readFileSync(FOTOS_PATH)) } catch { return {} }
 }
 function saveFotos(data) {
   fs.writeFileSync(FOTOS_PATH, JSON.stringify(data, null, 2))
+}
+function loadBrincadeira() {
+  try { return JSON.parse(fs.readFileSync(BRINCADEIRA_PATH)) } catch { return {} }
+}
+function saveBrincadeira(data) {
+  fs.writeFileSync(BRINCADEIRA_PATH, JSON.stringify(data, null, 2))
+}
+function isBrincadeiraOn(jid) {
+  const data = loadBrincadeira()
+  return !!data[jid]
 }
 
 function ensureTmpDir() {
@@ -90,35 +102,32 @@ async function getBuffer(msg, type) {
   for await (const c of stream) b = Buffer.concat([b,c])
   return b
 }
-
-async function replyWithFoto(sock, from, cmdName, texto, quotedMsg) {
+async function replyWithFoto(sock, from, cmdName, texto, quotedMsg, mentions=[]) {
   const fotos = loadFotos()
   const fotoPath = fotos[cmdName]
+  const opts = { quoted: quotedMsg }
   if (fotoPath && fs.existsSync(fotoPath)) {
-    await sock.sendMessage(from, { image: fs.readFileSync(fotoPath), caption: texto }, { quoted: quotedMsg })
+    await sock.sendMessage(from, { image: fs.readFileSync(fotoPath), caption: texto, mentions }, opts)
   } else {
-    await sock.sendMessage(from, { text: texto }, { quoted: quotedMsg })
+    await sock.sendMessage(from, { text: texto, mentions }, opts)
   }
 }
-
 function getQuotedMedia(msg) {
   const q = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
   if (!q) return null
-  if (q.audioMessage) return { msg: q.audioMessage, type: 'audio', isVideo: false }
-  if (q.videoMessage) return { msg: q.videoMessage, type: 'video', isVideo: true }
-  if (q.imageMessage) return { msg: q.imageMessage, type: 'image', isVideo: false }
-  if (q.documentMessage) return { msg: q.documentMessage, type: 'document', isVideo: false }
-  if (q.stickerMessage) return { msg: q.stickerMessage, type: 'sticker', isVideo: false }
+  if (q.audioMessage) return { msg: q.audioMessage, type: 'audio' }
+  if (q.videoMessage) return { msg: q.videoMessage, type: 'video' }
+  if (q.imageMessage) return { msg: q.imageMessage, type: 'image' }
+  if (q.documentMessage) return { msg: q.documentMessage, type: 'document' }
+  if (q.stickerMessage) return { msg: q.stickerMessage, type: 'sticker' }
   return null
 }
-
 function getOwnMedia(msg) {
-  if (msg.message.audioMessage) return { msg: msg.message.audioMessage, type: 'audio', isVideo: false }
-  if (msg.message.videoMessage) return { msg: msg.message.videoMessage, type: 'video', isVideo: true }
-  if (msg.message.imageMessage) return { msg: msg.message.imageMessage, type: 'image', isVideo: false }
+  if (msg.message.audioMessage) return { msg: msg.message.audioMessage, type: 'audio' }
+  if (msg.message.videoMessage) return { msg: msg.message.videoMessage, type: 'video' }
+  if (msg.message.imageMessage) return { msg: msg.message.imageMessage, type: 'image' }
   return null
 }
-
 const STYLES = {
   bold: {'a':'𝐚','b':'𝐛','c':'𝐜','d':'𝐝','e':'𝐞','f':'𝐟','g':'𝐠','h':'𝐡','i':'𝐢','j':'𝐣','k':'𝐤','l':'𝐥','m':'𝐦','n':'𝐧','o':'𝐨','p':'𝐩','q':'𝐪','r':'𝐫','s':'𝐬','t':'𝐭','u':'𝐮','v':'𝐯','w':'𝐰','x':'𝐱','y':'𝐲','z':'𝐳','A':'𝐀','B':'𝐁','C':'𝐂','D':'𝐃','E':'𝐄','F':'𝐅','G':'𝐆','H':'𝐇','I':'𝐈','J':'𝐉','K':'𝐊','L':'𝐋','M':'𝐌','N':'𝐍','O':'𝐎','P':'𝐏','Q':'𝐐','R':'𝐑','S':'𝐒','T':'𝐓','U':'𝐔','V':'𝐕','W':'𝐖','X':'𝐗','Y':'𝐘','Z':'𝐙','0':'𝟎','1':'𝟏','2':'𝟐','3':'𝟑','4':'𝟒','5':'𝟓','6':'𝟔','7':'𝟕','8':'𝟖','9':'𝟗'},
   italic: {'a':'𝘢','b':'𝘣','c':'𝘤','d':'𝘥','e':'𝘦','f':'𝘧','g':'𝘨','h':'𝘩','i':'𝘪','j':'𝘫','k':'𝘬','l':'𝘭','m':'𝘮','n':'𝘯','o':'𝘰','p':'𝘱','q':'𝘲','r':'𝘳','s':'𝘴','t':'𝘵','u':'𝘶','v':'𝘷','w':'𝘸','x':'𝘹','y':'𝘺','z':'𝘻','A':'𝘈','B':'𝘉','C':'𝘊','D':'𝘋','E':'𝘌','F':'𝘍','G':'𝘎','H':'𝘏','I':'𝘐','J':'𝘑','K':'𝘒','L':'𝘓','M':'𝘔','N':'𝘕','O':'𝘖','P':'𝘗','Q':'𝘘','R':'𝘙','S':'𝘚','T':'𝘛','U':'𝘜','V':'𝘝','W':'𝘞','X':'𝘟','Y':'𝘠','Z':'𝘡'},
@@ -135,12 +144,29 @@ function detectCmdFromText(text) {
   if (!text) return null
   const re = new RegExp(`[${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/!]([a-zA-Z0-9_]+)`, 'i')
   const m = text.match(re)
-  if (m) return m[1].toLowerCase()
-  return null
+  return m ? m[1].toLowerCase() : null
 }
 
+const BRINCADEIRA_CMDS = ['gay','ship','chance','dado','roll','cara','coroa','menubrincadeiras','menubrincadeira']
 const AUDIO_CMDS = Object.keys(audioFilters).concat(['bassbn','bassn','speed','velocidade','cortaraudio','reverse','audioreverso'])
 const VIDEO_CMDS = Object.keys(videoFilters).concat(['videoloop','cortarvideo'])
+
+async function getRandomGroupMembers(sock, groupJid, count = 2) {
+  try {
+    const meta = await sock.groupMetadata(groupJid)
+    const participants = (meta.participants || [])
+      .map(p => p.id)
+      .filter(id => id && !id.includes('status') && id !== sock.user?.id)
+    // embaralha
+    for (let i = participants.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[participants[i], participants[j]] = [participants[j], participants[i]]
+    }
+    return participants.slice(0, count)
+  } catch {
+    return []
+  }
+}
 
 async function main() {
   console.log(colors.cyan('🌸 Iniciando Nawty Bot...'))
@@ -153,6 +179,7 @@ async function main() {
       if (!msg?.message) return
 
       const from = msg.key.remoteJid
+      const isGroup = from.endsWith('@g.us')
       const sender = msg.key.participant || from
       const pushname = msg.pushName || 'Usuário'
 
@@ -170,8 +197,120 @@ async function main() {
       const args = body.trim().split(/ +/).slice(1)
       const q = args.join(' ')
 
-      const reply = async (t) => nawty.sendMessage(from, { text: t }, { quoted: msg })
+      const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
+
+      // ========== MODO BRINCADEIRA ==========
+      if (command === 'modobrincadeira') {
+        if (!isGroup) return reply('❌ Este comando só funciona em *grupos*.')
+        const val = (args[0] || '').trim()
+        if (val !== '0' && val !== '1') {
+          return reply(`🎮 *Modo Brincadeira*\n\nUse:\n${prefix}modobrincadeira 1 → ativar\n${prefix}modobrincadeira 0 → desativar\n\nStatus atual: *${isBrincadeiraOn(from) ? 'ATIVADO ✅' : 'DESATIVADO ❌'}*`)\n        }
+        const data = loadBrincadeira()
+        if (val === '1') {
+          data[from] = true
+          saveBrincadeira(data)
+          return reply('✅ *Modo Brincadeira ATIVADO* neste grupo!\n\nUse ' + prefix + 'menubrincadeiras para ver os comandos.')
+        } else {
+          delete data[from]
+          saveBrincadeira(data)
+          return reply('❌ *Modo Brincadeira DESATIVADO* neste grupo.')
+        }
+      }
+
+      // Bloqueia comandos de brincadeira se estiver off no grupo
+      if (isGroup && BRINCADEIRA_CMDS.includes(command) && command !== 'modobrincadeira') {
+        if (!isBrincadeiraOn(from)) {
+          return reply(`🔒 Comandos de brincadeira estão *desativados* neste grupo.\n\nUm admin pode ativar com:\n${prefix}modobrincadeira 1`)
+        }
+      }
+
+      // ========== MENU BRINCADEIRAS ==========
+      if (command === 'menubrincadeiras' || command === 'menubrincadeira') {
+        const menu = `╭🎮───────────────🎮╮
+   *MENU BRINCADEIRAS*
+╰🎮───────────────🎮╯
+
+${prefix}gay @ ou nome
+${prefix}ship  (2 pessoas aleatórias no grupo)
+${prefix}ship @ @  (ou mencione/nome)
+${prefix}chance <texto>
+${prefix}dado
+${prefix}cara
+
+⚙️ Ativar/Desativar:\n${prefix}modobrincadeira 1
+${prefix}modobrincadeira 0`
+        await replyWithFoto(nawty, from, 'menubrincadeiras', menu, msg)
+        return
+      }
+
+      // ========== SHIP (aleatório no grupo) ==========
+      if (command === 'ship') {
+        let n1, n2, mentions = []
+        const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
+
+        if (mentioned.length >= 2) {
+          n1 = `@${mentioned[0].split('@')[0]}`
+          n2 = `@${mentioned[1].split('@')[0]}`
+          mentions = [mentioned[0], mentioned[1]]
+        } else if (mentioned.length === 1) {
+          n1 = `@${mentioned[0].split('@')[0]}`
+          mentions = [mentioned[0]]
+          if (isGroup) {
+            const randoms = await getRandomGroupMembers(nawty, from, 1)
+            if (randoms[0]) {
+              n2 = `@${randoms[0].split('@')[0]}`
+              mentions.push(randoms[0])
+            } else n2 = args[0] || 'Alguém'
+          } else n2 = args[0] || 'Alguém'
+        } else if (isGroup && !args[0]) {
+          // duas pessoas aleatórias do grupo
+          const randoms = await getRandomGroupMembers(nawty, from, 2)
+          if (randoms.length < 2) {
+            return reply('❌ Não há membros suficientes no grupo para o ship.')
+          }
+          n1 = `@${randoms[0].split('@')[0]}`
+          n2 = `@${randoms[1].split('@')[0]}`
+          mentions = randoms
+        } else {
+          n1 = args[0] || pushname
+          n2 = args[1] || 'Alguém'
+        }
+
+        const pct = Math.floor(Math.random() * 101)
+        const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : pct > 20 ? '💔' : '❌'
+        const texto = `${emoji} *SHIP*\n\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`
+        await replyWithFoto(nawty, from, 'ship', texto, msg, mentions)
+        return
+      }
+
+      // ========== GAY ==========
+      if (command === 'gay') {
+        let target = q || pushname
+        let mentions = []
+        const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
+        if (mentioned[0]) {
+          target = `@${mentioned[0].split('@')[0]}`
+          mentions = [mentioned[0]]
+        }
+        const texto = `🏳️‍🌈 *${target}* é *${Math.floor(Math.random()*101)}%* gay`
+        await replyWithFoto(nawty, from, 'gay', texto, msg, mentions)
+        return
+      }
+
+      if (command === 'chance') {
+        if (!q) return reply(`Use: ${prefix}chance de eu ficar rico`)
+        await replyWithFoto(nawty, from, 'chance', `🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`, msg)
+        return
+      }
+      if (command === 'dado' || command === 'roll') {
+        await replyWithFoto(nawty, from, 'dado', `🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`, msg)
+        return
+      }
+      if (command === 'cara' || command === 'coroa') {
+        await replyWithFoto(nawty, from, 'cara', `🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`, msg)
+        return
+      }
 
       // ========== TOMP3 ==========
       if (command === 'tomp3') {
@@ -187,15 +326,14 @@ async function main() {
           await reagir('✅')
         } catch (e) {
           console.error(e)
-          await reply('❌ Erro no tomp3. Precisa do ffmpeg: pkg install ffmpeg')
+          await reply('❌ Erro no tomp3. pkg install ffmpeg')
           await reagir('❌')
         }
         return
       }
 
-      // ========== CORTAR ÁUDIO ==========
       if (command === 'cortaraudio') {
-        if (args.length < 2) return reply(`Use: ${prefix}cortaraudio <inicio> <fim>\nEx: ${prefix}cortaraudio 5 20`)
+        if (args.length < 2) return reply(`Use: ${prefix}cortaraudio <inicio> <fim>`)
         const media = getQuotedMedia(msg)
         if (!media || media.type !== 'audio') return reply('❌ Responda um *áudio*')
         try {
@@ -204,16 +342,12 @@ async function main() {
           const out = await cutAudio(buf, args[0], args[1])
           await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) {
-          console.error(e)
-          await reply('❌ Erro ao cortar áudio')
-        }
+        } catch { await reply('❌ Erro ao cortar áudio') }
         return
       }
 
-      // ========== CORTAR VÍDEO ==========
       if (command === 'cortarvideo') {
-        if (args.length < 2) return reply(`Use: ${prefix}cortarvideo <inicio> <fim>\nEx: ${prefix}cortarvideo 0 10`)
+        if (args.length < 2) return reply(`Use: ${prefix}cortarvideo <inicio> <fim>`)
         const media = getQuotedMedia(msg)
         if (!media || media.type !== 'video') return reply('❌ Responda um *vídeo*')
         try {
@@ -222,50 +356,38 @@ async function main() {
           const out = await cutVideo(buf, args[0], args[1])
           await nawty.sendMessage(from, { video: out, caption: '✂️ Cortado' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) {
-          console.error(e)
-          await reply('❌ Erro ao cortar vídeo')
-        }
+        } catch { await reply('❌ Erro ao cortar vídeo') }
         return
       }
 
-      // ========== EFEITOS DE ÁUDIO ==========
-      if (AUDIO_CMDS.includes(command) || command === 'reverse' || command === 'audioreverso') {
+      if (AUDIO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
         if (!media || (media.type !== 'audio' && media.type !== 'video')) {
-          return reply(`❌ Responda um *áudio* (ou vídeo) com ${prefix}${command}`)
+          return reply(`❌ Responda um *áudio* com ${prefix}${command}`)
         }
         try {
           await reagir('⏳')
-          const buf = await getBuffer(media.msg, media.type)
-          // se for vídeo, extrai áudio primeiro
-          let audioBuf = buf
-          if (media.type === 'video') audioBuf = await toMp3(buf, true)
-
+          let buf = await getBuffer(media.msg, media.type)
+          if (media.type === 'video') buf = await toMp3(buf, true)
           let effect = command
-          if (command === 'reverse' || command === 'audioreverso') effect = 'reverse'
-
+          if (command === 'audioreverso') effect = 'reverse'
           const extra = {}
           if (effect === 'bassbn' || effect === 'bassn') extra.gain = args[0]
           if (effect === 'speed' || effect === 'velocidade') extra.speed = args[0]
-
-          const out = await applyAudioEffect(audioBuf, effect, extra)
-          await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg })
+          const out = await applyAudioEffect(buf, effect, extra)
+          await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
         } catch (e) {
           console.error(e)
-          await reply('❌ Erro no efeito. Instale: pkg install ffmpeg')
+          await reply('❌ Erro no efeito. pkg install ffmpeg')
           await reagir('❌')
         }
         return
       }
 
-      // ========== EFEITOS DE VÍDEO ==========
       if (VIDEO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || media.type !== 'video') {
-          return reply(`❌ Responda um *vídeo* com ${prefix}${command}`)
-        }
+        if (!media || media.type !== 'video') return reply(`❌ Responda um *vídeo* com ${prefix}${command}`)
         try {
           await reagir('⏳')
           const buf = await getBuffer(media.msg, 'video')
@@ -274,7 +396,7 @@ async function main() {
           await reagir('✅')
         } catch (e) {
           console.error(e)
-          await reply('❌ Erro no efeito de vídeo. Instale: pkg install ffmpeg')
+          await reply('❌ Erro no efeito de vídeo')
           await reagir('❌')
         }
         return
@@ -307,9 +429,7 @@ async function main() {
           const qt = quoted?.conversation || quoted?.extendedTextMessage?.text || ''
           cmdName = detectCmdFromText(qt) || ''
         }
-        if (!cmdName) {
-          return reply(`📸 *SETFOTO*\n\n${prefix}setfoto menu\n${prefix}setfoto list\n${prefix}setfoto del menu`)
-        }
+        if (!cmdName) return reply(`📸 ${prefix}setfoto menu | list | del menu`)
         let media = null
         if (msg.message.imageMessage) media = msg.message.imageMessage
         else if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
@@ -326,13 +446,11 @@ async function main() {
           saveFotos(fotos)
           await reply(`✅ Foto definida para *${prefix}${cmdName}*`)
           await reagir('✅')
-        } catch (e) {
-          await reply('❌ Erro ao salvar a foto.')
-        }
+        } catch { await reply('❌ Erro ao salvar a foto.') }
         return
       }
 
-      // ========== MENU ==========
+      // ========== MENU PRINCIPAL ==========
       if (['menu','help','ajuda'].includes(command)) {
         const menu = `╭🌸───────────────🌸╮
        *NAWTY BOT*
@@ -347,32 +465,17 @@ async function main() {
 
 ╭─『 MÍDIA 』
 │ ${prefix}tomp3
-│ ${prefix}cortaraudio 5 20
-│ ${prefix}cortarvideo 0 10
+│ ${prefix}cortaraudio / ${prefix}cortarvideo
+│ efeitos: ${prefix}bass ${prefix}videorapido...
 ╰──────────────
 
-╭─『 ÁUDIO 』
-│ ${prefix}bass ${prefix}bass2 ${prefix}bass3
-│ ${prefix}grave ${prefix}eco ${prefix}reverb
-│ ${prefix}reverse ${prefix}normalizar
-│ ${prefix}vozmenino ${prefix}vozmulher
-│ ${prefix}vozhomem ${prefix}vozcrianca
-│ ${prefix}audiorapido ${prefix}audiolento
-│ ${prefix}speed 1.5 ${prefix}volumeboost
-│ ${prefix}chorus ${prefix}flanger ${prefix}tremolo
-╰──────────────
-
-╭─『 VÍDEO 』
-│ ${prefix}videorapido ${prefix}videoslow
-│ ${prefix}videoreverso ${prefix}videoloop
-│ ${prefix}videomudo ${prefix}videobw
-│ ${prefix}espelhar ${prefix}rotacionar
-│ ${prefix}sepia ${prefix}pretoebranco
+╭─『 BRINCADEIRAS 』
+│ ${prefix}modobrincadeira 1/0
+│ ${prefix}menubrincadeiras
 ╰──────────────
 
 ╭─『 OUTROS 』
-│ ${prefix}nick ${prefix}gay ${prefix}ship
-│ ${prefix}dado ${prefix}calc ${prefix}ping
+│ ${prefix}nick ${prefix}calc ${prefix}ping
 │ ${prefix}setfoto ${prefix}info ${prefix}dono
 ╰──────────────`
         await replyWithFoto(nawty, from, 'menu', menu, msg)
@@ -396,9 +499,7 @@ async function main() {
           webpBuf = await writeExif(webpBuf, config.NomeDoBot||'Nawty', config.NomeDoDono||'Nawty')
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
-        } catch(e) {
-          await reply('❌ Erro na figurinha')
-        }
+        } catch { await reply('❌ Erro na figurinha') }
         return
       }
 
@@ -431,29 +532,6 @@ async function main() {
         return
       }
 
-      if (command === 'gay') {
-        await replyWithFoto(nawty, from, 'gay', `🏳️‍🌈 *${q||pushname}* é *${Math.floor(Math.random()*101)}%* gay`, msg)
-        return
-      }
-      if (command === 'ship') {
-        const pct = Math.floor(Math.random()*101)
-        const emoji = pct>80?'💘':pct>50?'❤️':'💔'
-        await replyWithFoto(nawty, from, 'ship', `${emoji} ${(args[0]||pushname)} + ${(args[1]||'Alguém')} = *${pct}%*`, msg)
-        return
-      }
-      if (command === 'chance') {
-        if (!q) return reply(`Use: ${prefix}chance ...`)
-        await replyWithFoto(nawty, from, 'chance', `🎯 *${q}* → *${Math.floor(Math.random()*101)}%*`, msg)
-        return
-      }
-      if (command === 'dado' || command === 'roll') {
-        await replyWithFoto(nawty, from, 'dado', `🎲 *${Math.floor(Math.random()*6)+1}*`, msg)
-        return
-      }
-      if (command === 'cara' || command === 'coroa') {
-        await replyWithFoto(nawty, from, 'cara', `🪙 *${Math.random()>0.5?'Cara':'Coroa'}*`, msg)
-        return
-      }
       if (command === 'pp' || command === 'perfil') {
         try {
           let jid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || sender
@@ -487,7 +565,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Bot pronto! tomp3 + efeitos ativos.')
+  GreenLog('✅ Bot pronto! Brincadeiras + ship aleatório ativos.')
 }
 
 main()
