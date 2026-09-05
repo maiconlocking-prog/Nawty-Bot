@@ -3,6 +3,43 @@
   Suporte a Pairing Code (padrão) e QR Code
 */
 
+// Silencia spam de sessão do Baileys/libsignal no terminal
+const _log = console.log.bind(console)
+const _info = console.info.bind(console)
+const _warn = console.warn.bind(console)
+const _debug = console.debug ? console.debug.bind(console) : () => {}
+const _error = console.error.bind(console)
+
+function shouldSilence(args) {
+  try {
+    const text = args.map(a => {
+      if (typeof a === 'string') return a
+      if (a && typeof a === 'object') return JSON.stringify(a)
+      return String(a)
+    }).join(' ')
+    return (
+      text.includes('Closing open session') ||
+      text.includes('Closing session') ||
+      text.includes('SessionEntry') ||
+      text.includes('prekey bundle') ||
+      text.includes('currentRatchet') ||
+      text.includes('ephemeralKeyPair') ||
+      text.includes('remoteIdentityKey') ||
+      text.includes('chainKey') ||
+      text.includes('messageKeys')
+    )
+  } catch {
+    return false
+  }
+}
+
+console.log = (...args) => { if (!shouldSilence(args)) _log(...args) }
+console.info = (...args) => { if (!shouldSilence(args)) _info(...args) }
+console.warn = (...args) => { if (!shouldSilence(args)) _warn(...args) }
+console.debug = (...args) => { if (!shouldSilence(args)) _debug(...args) }
+// mantém erros reais, mas filtra spam de sessão
+console.error = (...args) => { if (!shouldSilence(args)) _error(...args) }
+
 const { Boom } = require('@hapi/boom')
 const NodeCache = require('node-cache')
 const readline = require('readline')
@@ -39,7 +76,6 @@ async function startConnection(NucleoDeCmds, config) {
 
   isReconnecting = true
 
-  // Dynamic import para Baileys 7 (ESM-only)
   const baileys = await import('@whiskeysockets/baileys')
   const {
     default: makeWASocket,
@@ -58,11 +94,11 @@ async function startConnection(NucleoDeCmds, config) {
   const nawty = makeWASocket({
     version,
     logger,
+    printQRInTerminal: false,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger)
     },
-    // printQRInTerminal está deprecado no Baileys 7
     browser: Browsers.windows('Chrome'),
     msgRetryCounterCache,
     connectTimeoutMs: 60000,
@@ -77,7 +113,6 @@ async function startConnection(NucleoDeCmds, config) {
     getMessage: async () => undefined
   })
 
-  // ========== PAIRING CODE (padrão) ==========
   if (usePairingCode && !nawty.authState.creds.registered) {
     let phoneNumber = await question(colors.cyan('Digite o número do WhatsApp (com DDD, só números, ex: 5511987654321): '))
     phoneNumber = phoneNumber.replace(/\D/g, '')
@@ -104,7 +139,6 @@ async function startConnection(NucleoDeCmds, config) {
   nawty.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update
 
-    // QR Code (quando não estiver usando pairing)
     if (qr && !usePairingCode) {
       console.log(colors.yellow('\n📱 QR Code gerado! Escaneie com o WhatsApp:\n'))
       try {
@@ -154,7 +188,6 @@ async function startConnection(NucleoDeCmds, config) {
     }
   })
 
-  // Evento de grupo (bem-vindo)
   nawty.ev.on('group-participants.update', async (update) => {
     const { id, participants, action } = update
     if (!fs.existsSync('./arquivos/json/welkon.json')) return
