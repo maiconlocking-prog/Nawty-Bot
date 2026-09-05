@@ -14,8 +14,8 @@ const TOP = '╭┈'
 const MID = '┊'
 const BOT = '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
 const SEP = '❁'
-const ITEM = '•.̇𖥨֗💜jante'
-const TITLE = '🍧ฺꕸ▸'
+const ITEM = '•.̇𖥨֗💜◆'
+const TITLE = '🍧ꕸ▸'
 
 function section(title, lines) {
   let t = TOP + SEP + ' *' + title + '*\n' + MID + '\n'
