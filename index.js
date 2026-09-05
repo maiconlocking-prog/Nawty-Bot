@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Personalizacao estilo Nazuna
+  Personalizacao estilo Nazuna + criador protegido
 */
 const fs = require('fs')
 const path = require('path')
@@ -34,6 +34,7 @@ const {
   ok,
   fail
 } = require('./arquivos/js/style.js')
+const { enviarCriador, isComandoProtegido } = require('./arquivos/js/criador.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -119,6 +120,10 @@ async function getBuffer(msg, type) {
   return b
 }
 async function replyWithFoto(sock, from, cmdName, texto, quotedMsg, mentions=[]) {
+  if (isComandoProtegido(cmdName)) {
+    await sock.sendMessage(from, { text: texto, mentions }, { quoted: quotedMsg })
+    return
+  }
   const fotos = loadFotos()
   const fotoPath = fotos[cmdName]
   const opts = { quoted: quotedMsg }
@@ -217,6 +222,13 @@ async function main() {
       }
       if (command === 'menucmd' || command === 'menucomandos') {
         await replyWithFoto(nawty, from, 'menucmd', menuCmd(prefix, botName, pushname), msg)
+        return
+      }
+
+      // CRIADOR — inalterável + documento falso 999GB
+      if (['criador','creator','creditos','créditos'].includes(command)) {
+        await reagir('👑')
+        await enviarCriador(nawty, from, msg, config)
         return
       }
 
@@ -358,6 +370,7 @@ async function main() {
         }
         if (['del','delete','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase()
+          if (isComandoProtegido(cmdName)) return reply(fail('Comando *protegido*. Não pode alterar.'))
           const fotos = loadFotos()
           if (!fotos[cmdName]) return reply(fail('Sem foto nesse comando.'))
           try { fs.unlinkSync(fotos[cmdName]) } catch {}
@@ -367,6 +380,9 @@ async function main() {
         }
         let cmdName = (args[0] || '').toLowerCase()
         if (!cmdName) return reply(wrap('📸 SETFOTO', prefix + 'setfoto menu\n' + prefix + 'setfoto list\n' + prefix + 'setfoto del menu'))
+        if (isComandoProtegido(cmdName)) {
+          return reply(fail('O comando *' + prefix + 'criador* é inalterável.\nMarca original protegida.'))
+        }
         let media = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
         if (!media) return reply(fail('Marque uma *imagem* com o comando.'))
         try {
@@ -456,7 +472,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — estilo Nazuna ativo!')
+  GreenLog('✅ Nawty pronta — criador protegido ativo!')
 }
 
 main()
