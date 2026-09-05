@@ -96,15 +96,26 @@ function menuBrincadeiras(prefix, botName, userName) {
 function menuDono(prefix, botName, userName) {
   return (
     header(botName, userName, '👑') + '\n\n' +
-    section('👑 DONO', [
+    section('👑 DONO / CRIADOR', [
       prefix + 'criador',
       prefix + 'dono / ' + prefix + 'info',
+      prefix + 'backup',
       prefix + 'setfoto <cmd> | list | del',
       prefix + 'semprefixo list/add/del',
-      prefix + 'addvip @ / ' + prefix + 'delvip @',
-      prefix + 'listvip',
       prefix + 'modobrincadeira 1/0'
-    ], '👑')
+    ], '👑') + '\n\n' +
+    section('💎 VIP', [
+      prefix + 'addvip @user [dias]',
+      prefix + 'delvip @user',
+      prefix + 'listvip'
+    ], '💎') + '\n\n' +
+    section('💰 ECONOMIA RPG', [
+      prefix + 'addcoins @user <valor>',
+      prefix + 'delcoins @user <valor>',
+      prefix + 'setcoins @user <valor>',
+      prefix + 'sorteio <valor>',
+      prefix + 'resetrpg @user'
+    ], '💰')
   )
 }
 
@@ -170,10 +181,13 @@ function menuVip(prefix, botName, userName) {
       'Minerar com bônus',
       prefix + 'vip  (status)'
     ], '💎') + '\n\n' +
-    section('👑 GESTÃO (DONO)', [
+    section('👑 GESTÃO (DONO/CRIADOR)', [
       prefix + 'addvip @user [dias]',
       prefix + 'delvip @user',
-      prefix + 'listvip'
+      prefix + 'listvip',
+      prefix + 'addcoins @ <valor>',
+      prefix + 'delcoins @ <valor>',
+      prefix + 'sorteio <valor>'
     ], '👑')
   )
 }
