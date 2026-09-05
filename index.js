@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menus + RPG/VIP + take + sem prefixo + autosave
+  Menus + RPG + Dono Nazuna-style + autosave
 */
 const fs = require('fs')
 const path = require('path')
@@ -39,6 +39,7 @@ const { handleRpg } = require('./arquivos/js/rpg.js')
 const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('./arquivos/js/take.js')
 const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 const { startAutosave, backupAll } = require('./arquivos/js/autosave.js')
+const { handleDono, isBlocked, isGroupBanned } = require('./arquivos/js/donoHandler.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -229,6 +230,11 @@ async function main() {
       const senderNum = String(sender || '').split('@')[0].split(':')[0].replace(/\D/g, '')
       const isOwner = isCriador(sender) || (numDono && (senderNum === numDono || senderNum.endsWith(numDono) || numDono.endsWith(senderNum)))
 
+      if (!isOwner) {
+        if (isBlocked(sender)) return
+        if (isGroup && isGroupBanned(from)) return
+      }
+
       if (['menu','help','ajuda'].includes(command)) {
         await replyWithFoto(nawty, from, 'menu', menuPrincipal(prefix, botName, pushname), msg)
         return
@@ -263,8 +269,14 @@ async function main() {
       if (command === 'backup') {
         if (!isOwner) return reply('❌ Só o dono/criador.')
         const r = backupAll('manual')
-        return reply(ok('Backup salvo!\nArquivos: *' + r.count + '*\nPasta: database/backups/'))
+        return reply(ok('Backup salvo!\nArquivos: *' + r.count + '*'))
       }
+
+      const donoHandled = await handleDono({
+        command, args, q, sender, pushname, from, isGroup, msg,
+        prefix, reply, sock: nawty, config, isOwner
+      })
+      if (donoHandled) return
 
       const handled = await handleAdminAndRanks({
         nawty, msg, from, isGroup, sender, pushname, command, args, q, prefix, reply, replyWithFoto, botName
@@ -322,7 +334,7 @@ async function main() {
         return
       }
       if (command === 'chance') {
-        if (!q) return reply(wrap('🎯 CHANCE', prefix + 'chance <texto>'))
+        if (!q) return reply(wrap('🎯', prefix + 'chance <texto>'))
         await replyWithFoto(nawty, from, 'chance', chanceReply(q, Math.floor(Math.random()*101)), msg)
         return
       }
@@ -350,7 +362,7 @@ async function main() {
 
       if (AUDIO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || (media.type !== 'audio' && media.type !== 'video')) return reply(fail('Responda um áudio.'))
+        if (!media || (media.type !== 'audio' && media.type !== 'video')) return reply(fail('Responda áudio.'))
         try {
           await reagir('⏳')
           let buf = await getBuffer(media.msg, media.type)
@@ -367,7 +379,7 @@ async function main() {
 
       if (VIDEO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || media.type !== 'video') return reply(fail('Responda um vídeo.'))
+        if (!media || media.type !== 'video') return reply(fail('Responda vídeo.'))
         try {
           await reagir('⏳')
           const buf = await getBuffer(media.msg, 'video')
@@ -380,15 +392,15 @@ async function main() {
 
       if (command === 'rgtake' || command === 'rtake') {
         const parsed = parseTakeText(q)
-        if (!parsed) return reply(wrap('📝 TAKE', prefix + 'rgtake Nome/Autor'))
+        if (!parsed) return reply(prefix + 'rgtake Nome/Autor')
         setUserTake(sender, parsed.pack, parsed.author)
-        return reply(ok('Pack: *' + parsed.pack + '* | Autor: *' + parsed.author + '*'))
+        return reply(ok(parsed.pack + ' / ' + parsed.author))
       }
       if (command === 'take') {
         const reg = getUserTake(sender)
-        if (!reg) return reply('Registre: ' + prefix + 'rgtake Nome/Autor')
+        if (!reg) return reply(prefix + 'rgtake Nome/Autor')
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply(fail('Responda uma figurinha.'))
+        if (!quoted?.stickerMessage) return reply(fail('Responda figurinha.'))
         try {
           await reagir('⏳')
           const buf = await getBuffer(quoted.stickerMessage, 'sticker')
@@ -405,14 +417,14 @@ async function main() {
           const map = listAliases()
           const keys = Object.keys(map)
           if (!keys.length) return reply('_Nenhum atalho._')
-          let txt = 'Atalhos:\n'
+          let txt = ''
           keys.forEach(k => { txt += '• *' + k.toUpperCase() + '* → ' + prefix + map[k] + '\n' })
           return reply(wrap('⚡ SEM PREFIXO', txt))
         }
         if (sub === 'add') {
           if (!args[1] || !args[2]) return reply(prefix + 'semprefixo add S s')
           const r = addAlias(args[1], args[2])
-          return reply(r.ok ? ok(r.alias.toUpperCase() + ' → ' + prefix + r.command) : fail(r.msg))
+          return reply(r.ok ? ok(r.alias.toUpperCase() + ' → ' + r.command) : fail(r.msg))
         }
         if (['del','rm'].includes(sub)) {
           const r = delAlias(args[1])
@@ -426,7 +438,7 @@ async function main() {
         if (sub === 'list') {
           const fotos = loadFotos()
           const keys = Object.keys(fotos)
-          return reply(keys.length ? wrap('📸', keys.map(k => prefix + k).join('\n')) : '_Nenhuma._')
+          return reply(keys.length ? keys.map(k => prefix + k).join('\n') : '_Nenhuma._')
         }
         if (['del','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase()
@@ -441,7 +453,7 @@ async function main() {
         if (!cmdName) return reply(prefix + 'setfoto menu')
         if (isComandoProtegido(cmdName)) return reply(fail('Protegido.'))
         let media = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
-        if (!media) return reply(fail('Marque uma imagem.'))
+        if (!media) return reply(fail('Marque imagem.'))
         try {
           const buffer = await getBuffer(media, 'image')
           const filePath = path.join(FOTOS_DIR, cmdName + '.jpg')
@@ -484,7 +496,7 @@ async function main() {
 
       if (command === 'nick') {
         if (!q) return reply(prefix + 'nick texto')
-        await replyWithFoto(nawty, from, 'nick', wrap('✨ NICK', q), msg)
+        await replyWithFoto(nawty, from, 'nick', wrap('✨', q), msg)
         return
       }
       if (command === 'calc') {
@@ -500,7 +512,7 @@ async function main() {
           let jid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || sender
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
           if (!pp) return reply(fail('Sem foto.'))
-          await nawty.sendMessage(from, { image: { url: pp }, caption: wrap('📸', '@' + jid.split('@')[0]) }, { quoted: msg })
+          await nawty.sendMessage(from, { image: { url: pp }, caption: '@' + jid.split('@')[0] }, { quoted: msg })
         } catch { await reply(fail('Erro.')) }
         return
       }
@@ -528,7 +540,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — RPG otimizado!')
+  GreenLog('✅ Nawty pronta — menudono completo!')
 }
 
 main()
