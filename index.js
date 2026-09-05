@@ -260,9 +260,8 @@ async function main() {
         return
       }
 
-      // backup manual (dono)
       if (command === 'backup') {
-        if (!isOwner) return reply('❌ Só o dono.')
+        if (!isOwner) return reply('❌ Só o dono/criador.')
         const r = backupAll('manual')
         return reply(ok('Backup salvo!\nArquivos: *' + r.count + '*\nPasta: database/backups/'))
       }
@@ -274,7 +273,7 @@ async function main() {
 
       const rpgHandled = await handleRpg({
         command, args, q, sender, pushname, from, isGroup, msg,
-        prefix, reply, sock: nawty, isOwner
+        prefix, reply, sock: nawty, isOwner, config
       })
       if (rpgHandled) return
 
@@ -529,7 +528,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — autosave ativo!')
+  GreenLog('✅ Nawty pronta — RPG otimizado!')
 }
 
 main()
