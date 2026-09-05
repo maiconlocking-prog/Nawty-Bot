@@ -1,5 +1,5 @@
 /**
- * Menus — estilo Nazuna (sem comando criador)
+ * Menus — estilo Nazuna (sem RPG/VIP)
  */
 
 function header(botName, userName, icon = '🌸') {
@@ -31,8 +31,6 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menubrincadeiras',
       prefix + 'menudono',
       prefix + 'menucmd',
-      prefix + 'menurpg',
-      prefix + 'menuvip',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -95,7 +93,7 @@ function menuBrincadeiras(prefix, botName, userName) {
 function menuDono(prefix, botName, userName) {
   return (
     header(botName, userName, '👑') + '\n\n' +
-    section('🤖 CONFIGURAÇÕES DO BOT', [
+    section('🤖 CONFIGURAÇÕES', [
       prefix + 'prefixo <novo>',
       prefix + 'numerodono <número>',
       prefix + 'nomedono <nome>',
@@ -123,18 +121,6 @@ function menuDono(prefix, botName, userName) {
       prefix + 'tm <mensagem>',
       prefix + 'divulgar <mensagem>'
     ], '📡') + '\n\n' +
-    section('💎 VIP', [
-      prefix + 'addvip @ [dias]',
-      prefix + 'delvip @',
-      prefix + 'listvip'
-    ], '💎') + '\n\n' +
-    section('💰 ECONOMIA RPG', [
-      prefix + 'addcoins @ <valor>',
-      prefix + 'delcoins @ <valor>',
-      prefix + 'setcoins @ <valor>',
-      prefix + 'sorteio <valor>',
-      prefix + 'resetrpg @'
-    ], '💰') + '\n\n' +
     section('⚡ SEM PREFIXO', [
       prefix + 'addnopref S s',
       prefix + 'delnopref S',
@@ -175,53 +161,12 @@ function menuCmd(prefix, botName, userName) {
   )
 }
 
+// stubs para não quebrar requires antigos
 function menuRpg(prefix, botName, userName) {
-  return (
-    header(botName, userName, '⚔️') + '\n\n' +
-    section('👤 PERFIL', [
-      prefix + 'perfilrpg',
-      prefix + 'carteira',
-      prefix + 'inv',
-      prefix + 'toprpg'
-    ], '⚔️') + '\n\n' +
-    section('💰 ECONOMIA', [
-      prefix + 'daily',
-      prefix + 'trabalhar',
-      prefix + 'minerar',
-      prefix + 'dep <valor|all>',
-      prefix + 'sacar <valor|all>',
-      prefix + 'pix @user <valor>',
-      prefix + 'loja',
-      prefix + 'comprar <item>'
-    ], '💰') + '\n\n' +
-    section('⚔️ COMBATE', [
-      prefix + 'batalhar @user'
-    ], '⚔️') + '\n\n' +
-    section('💎 VIP', [
-      prefix + 'menuvip',
-      prefix + 'vip'
-    ], '💎')
-  )
+  return menuPrincipal(prefix, botName, userName)
 }
-
 function menuVip(prefix, botName, userName) {
-  return (
-    header(botName, userName, '💎') + '\n\n' +
-    section('💎 BENEFÍCIOS VIP', [
-      'Daily em dobro',
-      'Trabalhar cooldown menor',
-      'Minerar com bônus',
-      prefix + 'vip'
-    ], '💎') + '\n\n' +
-    section('👑 GESTÃO (DONO)', [
-      prefix + 'addvip @user [dias]',
-      prefix + 'delvip @user',
-      prefix + 'listvip',
-      prefix + 'addcoins @ <valor>',
-      prefix + 'delcoins @ <valor>',
-      prefix + 'sorteio <valor>'
-    ], '👑')
-  )
+  return menuDono(prefix, botName, userName)
 }
 
 module.exports = {

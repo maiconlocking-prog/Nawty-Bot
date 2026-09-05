@@ -1,8 +1,8 @@
 /**
- * Dono:
- * 1) JID salvo em database/owners.json (resolve @lid)
- * 2) Se owners.json estiver VAZIO → o PRIMEIRO a mandar msg vira dono
- * 3) Também compara NumeroDoDono do config (quando houver número)
+ * DONO garantido:
+ * - Número fixo 5518996965458
+ * - Qualquer chat PRIVADO autoriza e grava o JID (@lid ok)
+ * - No grupo usa owners.json + número
  */
 const fs = require('fs')
 const path = require('path')
@@ -10,11 +10,14 @@ const path = require('path')
 const CONFIG_PATH = path.join(__dirname, '../../database/config.json')
 const OWNERS_PATH = path.join(__dirname, '../../database/owners.json')
 
+// NÚMERO DO DONO (fixo no código)
+const HARDCODED_OWNERS = ['5518996965458', '18996965458']
+
 if (!fs.existsSync(path.dirname(OWNERS_PATH))) {
   fs.mkdirSync(path.dirname(OWNERS_PATH), { recursive: true })
 }
 if (!fs.existsSync(OWNERS_PATH)) {
-  fs.writeFileSync(OWNERS_PATH, '[]')
+  fs.writeFileSync(OWNERS_PATH, JSON.stringify(HARDCODED_OWNERS, null, 2))
 }
 
 function onlyDigits(v) {
@@ -26,8 +29,11 @@ function numbersMatch(a, b) {
   const y = onlyDigits(b)
   if (!x || !y) return false
   if (x === y) return true
-  if (x.slice(-10) === y.slice(-10)) return true
-  if (x.slice(-11) === y.slice(-11)) return true
+  if (x.length >= 8 && y.length >= 8) {
+    if (x.slice(-8) === y.slice(-8)) return true
+    if (x.slice(-10) === y.slice(-10)) return true
+    if (x.slice(-11) === y.slice(-11)) return true
+  }
   if (x.endsWith(y) || y.endsWith(x)) return true
   return false
 }
@@ -46,7 +52,8 @@ function loadOwnerJids() {
 }
 
 function saveOwnerJids(list) {
-  const uniq = [...new Set(list.map(String).filter(Boolean))]
+  const base = [...HARDCODED_OWNERS, ...list.map(String)]
+  const uniq = [...new Set(base.filter(Boolean))]
   const tmp = OWNERS_PATH + '.tmp'
   fs.writeFileSync(tmp, JSON.stringify(uniq, null, 2))
   fs.renameSync(tmp, OWNERS_PATH)
@@ -56,11 +63,12 @@ function saveOwnerJids(list) {
 function collectIds(sender, msg) {
   const out = []
   const add = (v) => {
-    if (!v) return
+    if (v == null || v === '') return
     const s = String(v)
     out.push(s)
     const d = onlyDigits(s.split('@')[0].split(':')[0])
     if (d && d.length >= 5) out.push(d)
+    if (s.includes(':')) out.push(s.replace(/:[^@]+/, ''))
   }
   add(sender)
   const k = msg?.key || {}
@@ -69,14 +77,8 @@ function collectIds(sender, msg) {
   add(k.remoteJid)
   add(k.remoteJidAlt)
   add(k.participantPn)
-  add(k.senderLid)
   add(k.senderPn)
-  // device-less variants
-  for (const v of [...out]) {
-    if (String(v).includes(':')) {
-      add(String(v).replace(/:[^@]+/, ''))
-    }
-  }
+  add(k.senderLid)
   return [...new Set(out)]
 }
 
@@ -88,18 +90,17 @@ function resolveSenderJid(msg, fallbackSender) {
   return fallbackSender || k.remoteJid
 }
 
-function ownerDigitsList(config) {
+function allOwnerDigits(config) {
   const cfg = config || loadConfig()
-  const list = []
+  const list = [...HARDCODED_OWNERS]
   if (cfg.NumeroDoDono) list.push(cfg.NumeroDoDono)
   if (Array.isArray(cfg.Owners)) list.push(...cfg.Owners)
-  if (cfg.owners) list.push(...[].concat(cfg.owners))
   return [...new Set(list.map(onlyDigits).filter(d => d && d.length >= 8))]
 }
 
-function idsMatchOwnerList(ids, ownerList) {
+function matchAny(ids, owners) {
   for (const id of ids) {
-    for (const o of ownerList) {
+    for (const o of owners) {
       if (!o) continue
       if (String(id) === String(o)) return true
       if (numbersMatch(id, o)) return true
@@ -111,7 +112,6 @@ function idsMatchOwnerList(ids, ownerList) {
   return false
 }
 
-/** Salva todos os IDs possíveis do remetente como dono */
 function registerOwnerFromMessage(sender, msg) {
   const list = loadOwnerJids()
   for (const id of collectIds(sender, msg)) {
@@ -120,74 +120,52 @@ function registerOwnerFromMessage(sender, msg) {
   return saveOwnerJids(list)
 }
 
-/**
- * Se ainda não existe dono registrado, o primeiro a falar vira dono.
- * Retorna true se registrou agora.
- */
-function bootstrapOwnerIfEmpty(sender, msg) {
-  const list = loadOwnerJids()
-  if (list.length > 0) return false
-  const saved = registerOwnerFromMessage(sender, msg)
-  console.log('[DONO] Auto-registrado (primeiro usuário):', sender)
-  console.log('[DONO] IDs salvos:', saved.join(', '))
-  return true
+function isPrivateChat(msg) {
+  const jid = msg?.key?.remoteJid || ''
+  return jid && !String(jid).endsWith('@g.us') && !String(jid).endsWith('@broadcast')
 }
 
 function isOwnerSync(sender, config, msg) {
   const ids = collectIds(sender, msg)
 
-  // 1) arquivo owners.json (inclui @lid)
-  if (idsMatchOwnerList(ids, loadOwnerJids())) return true
+  // 1) hardcoded + config numbers
+  if (matchAny(ids, allOwnerDigits(config))) return true
 
-  // 2) números do config
-  if (idsMatchOwnerList(ids, ownerDigitsList(config))) return true
+  // 2) JIDs salvos (inclui @lid)
+  if (matchAny(ids, loadOwnerJids())) return true
+
+  // 3) PRIVADO = dono (bot pessoal) e grava JID para usar no grupo depois
+  if (isPrivateChat(msg)) {
+    registerOwnerFromMessage(sender, msg)
+    return true
+  }
 
   return false
 }
 
-async function resolveToPhoneJid(sock, jid) {
-  if (!jid) return jid
-  const s = String(jid)
-  if (s.includes('@s.whatsapp.net')) return s
-  try {
-    const map = sock?.signalRepository?.lidMapping
-    if (map) {
-      if (typeof map.getPNForLID === 'function') {
-        const pn = await map.getPNForLID(s)
-        if (pn) return pn
-      }
-      if (typeof map.getPNForLid === 'function') {
-        const pn = await map.getPNForLid(s)
-        if (pn) return pn
-      }
-    }
-  } catch {}
-  return s
-}
-
 async function isOwnerAsync(sock, sender, config, msg) {
-  // bootstrap antes de checar
-  bootstrapOwnerIfEmpty(sender, msg)
-
   if (isOwnerSync(sender, config, msg)) return true
 
-  // tenta mapear LID → número e salvar se bater com config
-  const ids = collectIds(sender, msg)
-  for (const id of ids) {
-    const resolved = await resolveToPhoneJid(sock, id)
-    if (resolved && resolved !== id) {
-      const owners = ownerDigitsList(config)
-      if (idsMatchOwnerList([resolved], owners) || idsMatchOwnerList([resolved], loadOwnerJids())) {
+  // tenta LID → PN
+  try {
+    const map = sock?.signalRepository?.lidMapping
+    const ids = collectIds(sender, msg)
+    for (const id of ids) {
+      if (!String(id).includes('@lid')) continue
+      let pn = null
+      if (map?.getPNForLID) pn = await map.getPNForLID(id)
+      else if (map?.getPNForLid) pn = await map.getPNForLid(id)
+      if (pn && matchAny([pn], allOwnerDigits(config))) {
         registerOwnerFromMessage(sender, msg)
         return true
       }
     }
-  }
+  } catch {}
+
   return false
 }
 
 function isOwnerOrCriador(sender, config, msg) {
-  bootstrapOwnerIfEmpty(sender, msg)
   return isOwnerSync(sender, config, msg)
 }
 
@@ -196,13 +174,11 @@ module.exports = {
   isOwnerSync,
   isOwnerAsync,
   resolveSenderJid,
-  resolveToPhoneJid,
-  ownerDigitsList,
-  onlyDigits,
-  numbersMatch,
   loadConfig,
   loadOwnerJids,
   registerOwnerFromMessage,
-  bootstrapOwnerIfEmpty,
+  HARDCODED_OWNERS,
+  onlyDigits,
+  numbersMatch,
   OWNERS_PATH
 }
