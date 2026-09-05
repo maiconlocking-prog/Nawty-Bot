@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Personalizacao estilo Nazuna + criador + take
+  Nazuna style + criador + take + sem prefixo
 */
 const fs = require('fs')
 const path = require('path')
@@ -36,6 +36,7 @@ const {
 } = require('./arquivos/js/style.js')
 const { enviarCriador, isComandoProtegido } = require('./arquivos/js/criador.js')
 const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('./arquivos/js/take.js')
+const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -200,11 +201,19 @@ async function main() {
         if (blocked) return
       }
 
-      if (!body || !body.startsWith(prefix)) return
+      let command, args, q
 
-      const command = body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase()
-      const args = body.trim().split(/ +/).slice(1)
-      const q = args.join(' ')
+      if (body && body.startsWith(prefix)) {
+        command = body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase()
+        args = body.trim().split(/ +/).slice(1)
+        q = args.join(' ')
+      } else {
+        const sp = resolveSemPrefixo(body)
+        if (!sp) return
+        command = sp.command
+        args = sp.args
+        q = sp.q
+      }
 
       const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
@@ -326,7 +335,7 @@ async function main() {
           const mp3 = await toMp3(buf, media.type === 'video')
           await nawty.sendMessage(from, { audio: mp3, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply(fail('Erro no tomp3. Instale ffmpeg.')) }
+        } catch (e) { await reply(fail('Erro no tomp3.')) }
         return
       }
 
@@ -360,37 +369,34 @@ async function main() {
         return
       }
 
-      // TAKE
       if (command === 'rgtake') {
         const parsed = parseTakeText(q)
         if (!parsed) {
-          return reply(wrap('📝 RGTAKE', 'Registre seu nome de figurinha.\n\nUse:\n' + prefix + 'rgtake *Nome/Autor*\n\nEx:\n' + prefix + 'rgtake Maicon/oi'))
+          return reply(wrap('📝 RGTAKE', 'Use:\n' + prefix + 'rgtake *Nome/Autor*\nEx: ' + prefix + 'rgtake Maicon/oi'))
         }
         setUserTake(sender, parsed.pack, parsed.author)
-        return reply(wrap('✅ RGTAKE', 'Registrado!\n\nPack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*\n\nAgora responda uma figurinha com:\n' + prefix + 'take'))
+        return reply(wrap('✅ RGTAKE', 'Pack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*\n\nResponda uma figurinha com *take* ou ' + prefix + 'take'))
       }
 
       if (command === 'rtake') {
         const atual = getUserTake(sender)
         const parsed = parseTakeText(q)
         if (!parsed) {
-          const info = atual
-            ? ('Atual:\nPack: *' + atual.pack + '*\nAutor: *' + atual.author + '*\n\n')
-            : 'Você ainda não registrou.\n\n'
-          return reply(wrap('✏️ RTAKE', info + 'Use:\n' + prefix + 'rtake *NovoNome/NovoAutor*'))
+          const info = atual ? ('Atual: *' + atual.pack + '/' + atual.author + '*\n\n') : ''
+          return reply(wrap('✏️ RTAKE', info + 'Use: ' + prefix + 'rtake *Nome/Autor*'))
         }
         setUserTake(sender, parsed.pack, parsed.author)
-        return reply(wrap('✅ RTAKE', 'Nome atualizado!\n\nPack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*'))
+        return reply(wrap('✅ RTAKE', 'Pack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*'))
       }
 
       if (command === 'take') {
         const reg = getUserTake(sender)
         if (!reg) {
-          return reply(wrap('🎨 TAKE', 'Você ainda não registrou um nome.\n\n1) ' + prefix + 'rgtake *Nome/Autor*\n2) Responda uma figurinha com ' + prefix + 'take'))
+          return reply(wrap('🎨 TAKE', 'Registre antes:\n' + prefix + 'rgtake *Nome/Autor*\nDepois responda a figurinha com *T* ou ' + prefix + 'take'))
         }
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
         const st = quoted?.stickerMessage
-        if (!st) return reply(fail('Responda uma *figurinha* com ' + prefix + 'take'))
+        if (!st) return reply(fail('Responda uma *figurinha* com take'))
         try {
           await reagir('⏳')
           const buf = await getBuffer(st, 'sticker')
@@ -404,6 +410,43 @@ async function main() {
         return
       }
 
+      // SEM PREFIXO — gerenciar atalhos
+      if (command === 'semprefixo' || command === 'atalho' || command === 'alias') {
+        const sub = (args[0] || '').toLowerCase()
+        if (sub === 'list' || sub === 'lista' || !sub) {
+          const map = listAliases()
+          const keys = Object.keys(map)
+          if (!keys.length) return reply(wrap('⚡ SEM PREFIXO', '_Nenhum atalho._'))
+          let txt = 'Atalhos ativos:\n\n'
+          keys.forEach(k => { txt += '• *' + k.toUpperCase() + '* → ' + prefix + map[k] + '\n' })
+          txt += '\nAdd: ' + prefix + 'semprefixo add S s\nDel: ' + prefix + 'semprefixo del S'
+          return reply(wrap('⚡ SEM PREFIXO', txt))
+        }
+        if (sub === 'add') {
+          const alias = args[1]
+          const cmd = args[2]
+          if (!alias || !cmd) {
+            return reply(wrap('⚡ SEM PREFIXO', 'Use:\n' + prefix + 'semprefixo add *S* *s*\nEx:\n' + prefix + 'semprefixo add T take'))
+          }
+          const r = addAlias(alias, cmd)
+          if (!r.ok) return reply(fail(r.msg))
+          return reply(ok('Atalho *' + r.alias.toUpperCase() + '* → ' + prefix + r.command))
+        }
+        if (sub === 'del' || sub === 'rm' || sub === 'delete') {
+          const alias = args[1]
+          if (!alias) return reply(fail('Use: ' + prefix + 'semprefixo del S'))
+          const r = delAlias(alias)
+          if (!r.ok) return reply(fail(r.msg))
+          return reply(ok('Atalho *' + r.alias.toUpperCase() + '* removido.'))
+        }
+        return reply(wrap('⚡ SEM PREFIXO', [
+          prefix + 'semprefixo list',
+          prefix + 'semprefixo add S s',
+          prefix + 'semprefixo add T take',
+          prefix + 'semprefixo del S'
+        ].join('\n')))
+      }
+
       if (command === 'setfoto') {
         const sub = (args[0] || '').toLowerCase()
         if (sub === 'list') {
@@ -414,21 +457,19 @@ async function main() {
         }
         if (['del','delete','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase()
-          if (isComandoProtegido(cmdName)) return reply(fail('Comando *protegido*. Não pode alterar.'))
+          if (isComandoProtegido(cmdName)) return reply(fail('Comando *protegido*.'))
           const fotos = loadFotos()
           if (!fotos[cmdName]) return reply(fail('Sem foto nesse comando.'))
           try { fs.unlinkSync(fotos[cmdName]) } catch {}
           delete fotos[cmdName]
           saveFotos(fotos)
-          return reply(ok('Foto de *' + prefix + cmdName + '* removida.'))
+          return reply(ok('Foto removida.'))
         }
         let cmdName = (args[0] || '').toLowerCase()
-        if (!cmdName) return reply(wrap('📸 SETFOTO', prefix + 'setfoto menu\n' + prefix + 'setfoto list\n' + prefix + 'setfoto del menu'))
-        if (isComandoProtegido(cmdName)) {
-          return reply(fail('O comando *' + prefix + 'criador* é inalterável.'))
-        }
+        if (!cmdName) return reply(wrap('📸 SETFOTO', prefix + 'setfoto menu'))
+        if (isComandoProtegido(cmdName)) return reply(fail('Comando protegido.'))
         let media = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
-        if (!media) return reply(fail('Marque uma *imagem* com o comando.'))
+        if (!media) return reply(fail('Marque uma *imagem*.'))
         try {
           const buffer = await getBuffer(media, 'image')
           const filePath = path.join(FOTOS_DIR, cmdName + '.jpg')
@@ -437,7 +478,7 @@ async function main() {
           fotos[cmdName] = filePath
           saveFotos(fotos)
           await reply(ok('Foto definida para *' + prefix + cmdName + '*'))
-        } catch { await reply(fail('Erro ao salvar a foto.')) }
+        } catch { await reply(fail('Erro ao salvar.')) }
         return
       }
 
@@ -453,7 +494,6 @@ async function main() {
           if (!media) return reply(fail('Responda uma *imagem* ou *vídeo*.'))
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
-          // se tiver take registrado, usa; senão padrão do bot
           const reg = getUserTake(sender)
           const pack = reg?.pack || config.NomeDoBot || 'Nawty'
           const author = reg?.author || config.NomeDoDono || 'Nawty'
@@ -520,7 +560,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — take ativo!')
+  GreenLog('✅ Nawty pronta — sem prefixo ativo!')
 }
 
 main()
