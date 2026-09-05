@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Dono = NumeroDoDono no config.json
+  Sem RPG/VIP | Dono: 5518996965458 + privado auto
 */
 const fs = require('fs')
 const path = require('path')
@@ -17,7 +17,7 @@ const {
   audioFilters,
   videoFilters
 } = require('./arquivos/js/mediaEffects.js')
-const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd, menuRpg, menuVip } = require('./arquivos/js/menus.js')
+const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd } = require('./arquivos/js/menus.js')
 const { handleAdminAndRanks, registrarAtividade } = require('./arquivos/js/adminHandler.js')
 const { processSecurity } = require('./arquivos/js/security.js')
 const { isGroupAdmin, botIsAdmin } = require('./arquivos/js/groupAdmin.js')
@@ -35,7 +35,6 @@ const {
   fail
 } = require('./arquivos/js/style.js')
 const { isComandoProtegido } = require('./arquivos/js/criador.js')
-const { handleRpg } = require('./arquivos/js/rpg.js')
 const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('./arquivos/js/take.js')
 const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 const { startAutosave, backupAll } = require('./arquivos/js/autosave.js')
@@ -256,14 +255,6 @@ async function main() {
         await replyWithFoto(nawty, from, 'menucmd', menuCmd(prefix, botName, pushname), msg)
         return
       }
-      if (command === 'menurpg' || command === 'rpg') {
-        await replyWithFoto(nawty, from, 'menurpg', menuRpg(prefix, botName, pushname), msg)
-        return
-      }
-      if (command === 'menuvip' || command === 'vipmenu') {
-        await replyWithFoto(nawty, from, 'menuvip', menuVip(prefix, botName, pushname), msg)
-        return
-      }
 
       if (command === 'backup') {
         if (!isOwner) return reply('❌ Só o dono.')
@@ -281,12 +272,6 @@ async function main() {
         nawty, msg, from, isGroup, sender, pushname, command, args, q, prefix, reply, replyWithFoto, botName
       })
       if (handled) return
-
-      const rpgHandled = await handleRpg({
-        command, args, q, sender, pushname, from, isGroup, msg,
-        prefix, reply, sock: nawty, isOwner, config
-      })
-      if (rpgHandled) return
 
       if (command === 'modobrincadeira') {
         if (!isGroup) return reply(fail('Só em grupos.'))
@@ -539,7 +524,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — dono via config!')
+  GreenLog('✅ Nawty pronta!')
 }
 
 main()
