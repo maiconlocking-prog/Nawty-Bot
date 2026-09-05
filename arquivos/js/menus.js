@@ -15,7 +15,6 @@ const MID = '┊'
 const BOT = '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
 const SEP = '❁'
 const ITEM = '•.̇𖥨֗💜◆'
-const TITLE = '🍧ꕸ▸'
 
 function section(title, lines) {
   let t = TOP + SEP + ' *' + title + '*\n' + MID + '\n'
@@ -34,6 +33,7 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menubrincadeiras',
       prefix + 'menudono',
       prefix + 'menucmd',
+      prefix + 'menurank',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -42,16 +42,24 @@ function menuPrincipal(prefix, botName, userName) {
 function menuAdm(prefix, botName, userName) {
   return (
     header(botName, userName) + '\n\n' +
-    section('🛡️ GESTÃO (em breve)', [
-      prefix + 'ban / ' + prefix + 'kick',
-      prefix + 'promover / ' + prefix + 'rebaixar',
-      prefix + 'marcar / ' + prefix + 'hidetag',
-      prefix + 'grupo A/F',
-      prefix + 'antilink'
+    section('🛡️ GESTÃO DE USUÁRIOS', [
+      prefix + 'ban @ / kick @',
+      prefix + 'promover @',
+      prefix + 'rebaixar @'
     ]) + '\n\n' +
-    section('⚙️ CONFIGURAÇÕES', [
-      prefix + 'modobrincadeira 1/0',
-      '_Sem necessidade de ativação_'
+    section('💬 MARCAÇÕES', [
+      prefix + 'marcar <texto>',
+      prefix + 'hidetag <texto>'
+    ]) + '\n\n' +
+    section('⚙️ GRUPO', [
+      prefix + 'grupo a  (abrir)',
+      prefix + 'grupo f  (fechar)',
+      prefix + 'linkgp',
+      prefix + 'del  (apaga msg marcada)'
+    ]) + '\n\n' +
+    section('📊 ATIVIDADE', [
+      prefix + 'rankativo',
+      prefix + 'resetativo'
     ])
   )
 }
@@ -60,16 +68,50 @@ function menuBrincadeiras(prefix, botName, userName) {
   return (
     header(botName, userName) + '\n\n' +
     section('🎮 BRINCADEIRAS', [
-      prefix + 'gay @ ou nome',
-      prefix + 'ship  (2 aleatórios no grupo)',
-      prefix + 'ship @ @',
+      prefix + 'gay @',
+      prefix + 'ship',
       prefix + 'chance <texto>',
       prefix + 'dado',
       prefix + 'cara'
     ]) + '\n\n' +
+    section('🏆 RANKS ALEATÓRIOS', [
+      prefix + 'rankgay',
+      prefix + 'rankcorno',
+      prefix + 'rankgado',
+      prefix + 'rankgostoso',
+      prefix + 'ranklindo',
+      prefix + 'rankengracado',
+      prefix + 'menurank  (lista todos)'
+    ]) + '\n\n' +
     section('⚡ ATIVAÇÃO NO GRUPO', [
       prefix + 'modobrincadeira 1',
       prefix + 'modobrincadeira 0'
+    ])
+  )
+}
+
+function menuRank(prefix, botName, userName) {
+  return (
+    header(botName, userName) + '\n\n' +
+    section('📊 RANK REAL', [
+      prefix + 'rankativo  (mais ativos)',
+      prefix + 'resetativo  (admin)'
+    ]) + '\n\n' +
+    section('🎲 RANKS DE BRINCADEIRA', [
+      prefix + 'rankgay',
+      prefix + 'rankburro',
+      prefix + 'rankinteligente',
+      prefix + 'rankotaku',
+      prefix + 'rankfiel / rankinfiel',
+      prefix + 'rankcorno / rankgado',
+      prefix + 'rankgostoso / rankgostosa',
+      prefix + 'rankrico / rankpobre',
+      prefix + 'ranklindo / ranklinda',
+      prefix + 'rankengracado',
+      prefix + 'rankfofoqueiro',
+      prefix + 'rankdorminhoco',
+      prefix + 'rankromantico',
+      prefix + 'rankciumento'
     ])
   )
 }
@@ -84,8 +126,7 @@ function menuDono(prefix, botName, userName) {
       prefix + 'setfoto list',
       prefix + 'setfoto del <comando>',
       prefix + 'modobrincadeira 1/0'
-    ]) + '\n\n' +
-    MID + '_Sem necessidade de ativação_\n' + BOT
+    ])
   )
 }
 
@@ -105,7 +146,7 @@ function menuCmd(prefix, botName, userName) {
       prefix + 'bass ' + prefix + 'grave ' + prefix + 'eco',
       prefix + 'reverse ' + prefix + 'normalizar',
       prefix + 'vozmenino ' + prefix + 'vozmulher',
-      prefix + 'speed 1.5 ' + prefix + 'volumeboost'
+      prefix + 'speed 1.5'
     ]) + '\n\n' +
     section('🎥 VÍDEO', [
       prefix + 'videorapido ' + prefix + 'videoslow',
@@ -123,6 +164,7 @@ module.exports = {
   menuPrincipal,
   menuAdm,
   menuBrincadeiras,
+  menuRank,
   menuDono,
   menuCmd
 }
