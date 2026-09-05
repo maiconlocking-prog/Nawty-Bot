@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menus + RPG + Dono Nazuna-style + autosave
+  Owner/Criador unificado
 */
 const fs = require('fs')
 const path = require('path')
@@ -40,6 +40,7 @@ const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('.
 const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 const { startAutosave, backupAll } = require('./arquivos/js/autosave.js')
 const { handleDono, isBlocked, isGroupBanned } = require('./arquivos/js/donoHandler.js')
+const { isOwnerOrCriador } = require('./arquivos/js/ownerCheck.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -226,13 +227,26 @@ async function main() {
       const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
 
-      const numDono = String(config.NumeroDoDono || '').replace(/\D/g, '')
-      const senderNum = String(sender || '').split('@')[0].split(':')[0].replace(/\D/g, '')
-      const isOwner = isCriador(sender) || (numDono && (senderNum === numDono || senderNum.endsWith(numDono) || numDono.endsWith(senderNum)))
+      const isOwner = isOwnerOrCriador(sender, config, msg)
 
       if (!isOwner) {
         if (isBlocked(sender)) return
         if (isGroup && isGroupBanned(from)) return
+      }
+
+      if (command === 'meuid' || command === 'myid') {
+        const { collectSenderCandidates, onlyDigits } = require('./arquivos/js/criador.js')
+        const cands = collectSenderCandidates(sender, msg)
+        const digs = [...new Set(cands.map(onlyDigits).filter(d => d && d.length >= 8))]
+        await reply(
+          '🆔 *SEU ID*\n\n' +
+          'Sender: `' + String(sender) + '`\n' +
+          'Números:\n' + digs.map(d => '• `' + d + '`').join('\n') + '\n\n' +
+          'Dono/Criador? *' + (isOwner ? 'SIM ✅' : 'NÃO ❌') + '*\n\n' +
+          '_Coloque um desses números em_ `arquivos/js/criador.js` _(campo numero)_\n' +
+          '_e em_ `database/config.json` _(NumeroDoDono)_'
+        )
+        return
       }
 
       if (['menu','help','ajuda'].includes(command)) {
@@ -540,7 +554,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — menudono completo!')
+  GreenLog('✅ Nawty pronta — criador/dono unificado!')
 }
 
 main()
