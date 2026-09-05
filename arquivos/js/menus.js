@@ -1,5 +1,5 @@
 /**
- * Menus organizados — estilo Nazuna
+ * Menus — estilo Nazuna (sem comando criador)
  */
 
 function header(botName, userName, icon = '🌸') {
@@ -33,7 +33,6 @@ function menuPrincipal(prefix, botName, userName) {
       prefix + 'menucmd',
       prefix + 'menurpg',
       prefix + 'menuvip',
-      prefix + 'criador',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -101,10 +100,10 @@ function menuDono(prefix, botName, userName) {
       prefix + 'numerodono <número>',
       prefix + 'nomedono <nome>',
       prefix + 'nomebot <nome>',
-      prefix + 'fotobot  (marque imagem)',
+      prefix + 'fotobot',
       prefix + 'msgprefix'
     ], '🤖') + '\n\n' +
-    section('👥 GERENCIAMENTO DE USUÁRIOS', [
+    section('👥 USUÁRIOS', [
       prefix + 'blockuserg @',
       prefix + 'unblockuserg @',
       prefix + 'listblocks',
@@ -113,8 +112,7 @@ function menuDono(prefix, botName, userName) {
       prefix + 'listblackglobal'
     ], '👥') + '\n\n' +
     section('🚫 GRUPOS', [
-      prefix + 'bangp',
-      prefix + 'unbangp',
+      prefix + 'bangp / ' + prefix + 'unbangp',
       prefix + 'listbangp',
       prefix + 'listagp',
       prefix + 'entrar <link>',
@@ -125,13 +123,10 @@ function menuDono(prefix, botName, userName) {
       prefix + 'tm <mensagem>',
       prefix + 'divulgar <mensagem>'
     ], '📡') + '\n\n' +
-    section('💎 VIP / PREMIUM', [
+    section('💎 VIP', [
       prefix + 'addvip @ [dias]',
       prefix + 'delvip @',
-      prefix + 'listvip',
-      prefix + 'addpremium @ [dias]',
-      prefix + 'delpremium @',
-      prefix + 'listprem'
+      prefix + 'listvip'
     ], '💎') + '\n\n' +
     section('💰 ECONOMIA RPG', [
       prefix + 'addcoins @ <valor>',
@@ -143,8 +138,7 @@ function menuDono(prefix, botName, userName) {
     section('⚡ SEM PREFIXO', [
       prefix + 'addnopref S s',
       prefix + 'delnopref S',
-      prefix + 'listnopref',
-      prefix + 'semprefixo list'
+      prefix + 'listnopref'
     ], '⚡') + '\n\n' +
     section('🛠️ MANUTENÇÃO', [
       prefix + 'reiniciar',
@@ -152,8 +146,7 @@ function menuDono(prefix, botName, userName) {
       prefix + 'limpardb confirmar',
       prefix + 'limparrankg',
       prefix + 'seradm / ' + prefix + 'sermembro',
-      prefix + 'setfoto <cmd>',
-      prefix + 'criador'
+      prefix + 'setfoto <cmd>'
     ], '🛠️')
   )
 }
@@ -218,9 +211,9 @@ function menuVip(prefix, botName, userName) {
       'Daily em dobro',
       'Trabalhar cooldown menor',
       'Minerar com bônus',
-      prefix + 'vip  (status)'
+      prefix + 'vip'
     ], '💎') + '\n\n' +
-    section('👑 GESTÃO (DONO/CRIADOR)', [
+    section('👑 GESTÃO (DONO)', [
       prefix + 'addvip @user [dias]',
       prefix + 'delvip @user',
       prefix + 'listvip',
