@@ -1,57 +1,58 @@
 /**
- * Comando CRIADOR — protegido / ofuscado
- * Não altera via setfoto nem menus.
+ * Comando CRIADOR — protegido
+ *
+ * Edite apenas este bloco para definir o criador reconhecido pelo bot:
  */
-
-// strings protegidas (base64) — dificulta edição casual
-const _b = (s) => Buffer.from(s, 'base64').toString('utf8')
-
-const _N1 = _b('TmF3dHlW')           // NawtyV (fallback ASCII)
-const _N2 = _b('TmF3dHktQm90')       // Nawty-Bot
-const _CMD = ['criador', 'creator', 'creditos', 'créditos']
-
-// marca estilizada (Unicode)
-const MARCA = {
-  criadorFancy: '𝕹𝖆𝖜𝖙𝖞𝖁',
-  botFancy: '𝑵𝒂𝒘𝒕𝒚-𝑩𝒐𝒕',
-  criadorLabel: '𝕮𝖗𝖎𝖆𝖉𝖔𝖗'
+const CRIADOR_CONFIG = {
+  // ===== EDITE AQUI =====
+  nome: '𝕹𝖆𝖜𝖙𝖞𝖁',
+  numero: '5511987654321', // só números, com DDI (ex: 5511999999999)
+  botFancy: '𝑵𝒂𝒘𝒕𝒚-𝑩𝒐𝒕'
+  // ======================
 }
+
+const _CMD = ['criador', 'creator', 'creditos', 'créditos']
 
 function isComandoProtegido(cmd) {
   return _CMD.includes(String(cmd || '').toLowerCase())
 }
 
+/** Normaliza número para comparação */
+function onlyDigits(v) {
+  return String(v || '').replace(/\D/g, '')
+}
+
+/**
+ * Reconhece se o JID/número é o criador
+ * Aceita: 5511..., ou jid tipo 5511...@s.whatsapp.net
+ */
+function isCriador(jidOrNumber) {
+  const alvo = onlyDigits(CRIADOR_CONFIG.numero)
+  if (!alvo) return false
+  const n = onlyDigits(String(jidOrNumber || '').split('@')[0].split(':')[0])
+  if (!n) return false
+  // compara finais (evita diferença de 55 / nono dígito em alguns casos)
+  return n === alvo || n.endsWith(alvo) || alvo.endsWith(n)
+}
+
 function buildCaption(config) {
-  const donoCfg = config.NomeDoDono || MARCA.criadorFancy
-  const num = String(config.NumeroDoDono || '').replace(/\D/g, '')
+  const num = onlyDigits(CRIADOR_CONFIG.numero)
+  const botName = (config && config.NomeDoBot) || 'NAWTY BOT'
   return [
     '╭┈⊰ 🌸 『 *CRIADOR* 』',
-    '┊',
-    '┊' + MARCA.criadorLabel + ': *' + MARCA.criadorFancy + '*',
-    '┊' + MARCA.botFancy,
-    '┊',
-    '┊🤖 Bot: *' + (config.NomeDoBot || _N2) + '*',
-    '┊👤 Config dono: *' + donoCfg + '*',
+    '┊𝕮𝖗𝖎𝖆𝖉𝖔𝖗: *' + CRIADOR_CONFIG.nome + '*',
+    '┊' + CRIADOR_CONFIG.botFancy,
+    '┊🤖 Bot: *' + botName + '*',
     num ? ('┊📱 wa.me/' + num) : null,
-    '┊🛡️ Marca original: *protegida*',
-    '┊🔐 Comando: *inalterável*',
-    '┊📦 Doc: *999 GB* (metadado)',
-    '┊',
-    '┊_Crédito fixo do criador — não editável_',
     '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
   ].filter(Boolean).join('\n')
 }
 
-/**
- * Documento falso 999GB + legenda do criador
- */
 async function enviarCriador(sock, from, msg, config) {
   const caption = buildCaption(config)
   const fakeBytes = 999 * 1024 * 1024 * 1024
   const content = Buffer.from(
-    _N2 + ' — ' + MARCA.criadorFancy + '\n' +
-    'Documento simbólico do criador.\n' +
-    'Tamanho 999GB é apenas metadado.\n'
+    'Nawty-Bot — ' + CRIADOR_CONFIG.nome + '\nDocumento simbólico do criador.\n'
   )
 
   try {
@@ -67,17 +68,12 @@ async function enviarCriador(sock, from, msg, config) {
       media.documentMessage.fileLength = fakeBytes
       media.documentMessage.fileName = 'CRIADOR-NAWTYV-999GB.pdf'
       media.documentMessage.mimetype = 'application/pdf'
-      media.documentMessage.title = MARCA.criadorFancy + ' | ' + MARCA.botFancy
+      media.documentMessage.title = CRIADOR_CONFIG.nome + ' | Nawty-Bot'
     }
 
     const waMsg = generateWAMessageFromContent(
       from,
-      {
-        documentMessage: {
-          ...media.documentMessage,
-          caption
-        }
-      },
+      { documentMessage: { ...media.documentMessage, caption } },
       { quoted: msg, userJid: sock.user?.id }
     )
 
@@ -100,8 +96,9 @@ async function enviarCriador(sock, from, msg, config) {
 }
 
 module.exports = {
-  MARCA,
+  CRIADOR_CONFIG,
   buildCaption,
   enviarCriador,
-  isComandoProtegido
+  isComandoProtegido,
+  isCriador
 }
