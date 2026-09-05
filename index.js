@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menus separados: menuadm, menubrincadeiras, menudono
+  Menus separados estilo Nazuna
 */
 const fs = require('fs')
 const path = require('path')
@@ -17,6 +17,7 @@ const {
   audioFilters,
   videoFilters
 } = require('./arquivos/js/mediaEffects.js')
+const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd } = require('./arquivos/js/menus.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -46,11 +47,6 @@ function saveBrincadeira(data) {
 }
 function isBrincadeiraOn(jid) {
   return !!loadBrincadeira()[jid]
-}
-function isDono(sender) {
-  const num = (config.NumeroDoDono || '').replace(/\D/g, '')
-  if (!num) return false
-  return (sender || '').replace(/\D/g, '').includes(num)
 }
 
 function ensureTmpDir() {
@@ -185,6 +181,7 @@ async function main() {
       const isGroup = from.endsWith('@g.us')
       const sender = msg.key.participant || from
       const pushname = msg.pushName || 'Usuário'
+      const botName = config.NomeDoBot || 'Nawty'
 
       let body =
         msg.message.conversation ||
@@ -203,102 +200,21 @@ async function main() {
       const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
 
-      // ========== MENU PRINCIPAL (só categorias) ==========
+      // ========== MENUS ESTILO NAZUNA ==========
       if (['menu','help','ajuda'].includes(command)) {
-        const menu =
-`╭🌸───────────────🌸╮
-       *NAWTY BOT*
-╰🌸───────────────🌸╯
-
-👤 ${pushname}
-🔰 Prefixo: *${prefix}*
-
-Escolha um menu:
-
-🛡️ ${prefix}menuadm
-🎮 ${prefix}menubrincadeiras
-👑 ${prefix}menudono
-
-📦 Outros:
-• ${prefix}menucmd  (figurinhas, mídia, utils)
-• ${prefix}modobrincadeira 1/0`
-        await replyWithFoto(nawty, from, 'menu', menu, msg)
+        await replyWithFoto(nawty, from, 'menu', menuPrincipal(prefix, botName, pushname), msg)
         return
       }
-
-      // ========== MENU ADMIN (sem ativação) ==========
       if (command === 'menuadm' || command === 'menuadmin') {
-        const menu =
-`╭🛡️───────────────🛡️╮
-      *MENU ADMIN*
-╰🛡️───────────────🛡️╯
-
-(Em breve comandos de grupo)
-
-📌 Planejados:
-• ${prefix}ban / ${prefix}kick
-• ${prefix}promover / ${prefix}rebaixar
-• ${prefix}marcar
-• ${prefix}hidetag
-• ${prefix}grupo abrir/fechar
-• ${prefix}antilink
-
-_Sem necessidade de ativação_`
-        await replyWithFoto(nawty, from, 'menuadm', menu, msg)
+        await replyWithFoto(nawty, from, 'menuadm', menuAdm(prefix, botName, pushname), msg)
         return
       }
-
-      // ========== MENU DONO (sem ativação) ==========
       if (command === 'menudono') {
-        const menu =
-`╭👑───────────────👑╮
-       *MENU DONO*
-╰👑───────────────👑╯
-
-• ${prefix}dono
-• ${prefix}info
-• ${prefix}setfoto <comando>
-• ${prefix}setfoto list
-• ${prefix}setfoto del <comando>
-• ${prefix}modobrincadeira 1/0
-
-_Sem necessidade de ativação_
-_Alguns comandos só o dono usa_`
-        await replyWithFoto(nawty, from, 'menudono', menu, msg)
+        await replyWithFoto(nawty, from, 'menudono', menuDono(prefix, botName, pushname), msg)
         return
       }
-
-      // ========== MENU CMD (figurinhas/mídia/utils) ==========
       if (command === 'menucmd' || command === 'menucomandos') {
-        const menu =
-`╭📦───────────────📦╮
-     *MENU COMANDOS*
-╰📦───────────────📦╯
-
-🎨 Figurinhas
-• ${prefix}s / ${prefix}sticker
-• ${prefix}toimg
-
-🎬 Mídia
-• ${prefix}tomp3
-• ${prefix}cortaraudio <i> <f>
-• ${prefix}cortarvideo <i> <f>
-
-🔊 Áudio
-• ${prefix}bass ${prefix}grave ${prefix}eco
-• ${prefix}reverse ${prefix}normalizar
-• ${prefix}vozmenino ${prefix}vozmulher
-• ${prefix}speed 1.5 ${prefix}volumeboost
-
-🎥 Vídeo
-• ${prefix}videorapido ${prefix}videoslow
-• ${prefix}videoreverso ${prefix}videomudo
-• ${prefix}espelhar ${prefix}rotacionar
-
-🛠️ Utils
-• ${prefix}nick ${prefix}calc ${prefix}ping
-• ${prefix}pp ${prefix}say`
-        await replyWithFoto(nawty, from, 'menucmd', menu, msg)
+        await replyWithFoto(nawty, from, 'menucmd', menuCmd(prefix, botName, pushname), msg)
         return
       }
 
@@ -322,31 +238,14 @@ _Alguns comandos só o dono usa_`
         }
       }
 
-      // Bloqueia brincadeiras se off no grupo
       if (isGroup && BRINCADEIRA_CMDS.includes(command)) {
         if (!isBrincadeiraOn(from)) {
           return reply('🔒 Brincadeiras *desativadas* neste grupo.\n\nAtive com:\n' + prefix + 'modobrincadeira 1')
         }
       }
 
-      // ========== MENU BRINCADEIRAS ==========
       if (command === 'menubrincadeiras' || command === 'menubrincadeira') {
-        const menu =
-`╭🎮───────────────🎮╮
-  *MENU BRINCADEIRAS*
-╰🎮───────────────🎮╯
-
-• ${prefix}gay @ ou nome
-• ${prefix}ship  (2 aleatórios no grupo)
-• ${prefix}ship @ @
-• ${prefix}chance <texto>
-• ${prefix}dado
-• ${prefix}cara
-
-⚙️ Ativar/Desativar no grupo:
-• ${prefix}modobrincadeira 1
-• ${prefix}modobrincadeira 0`
-        await replyWithFoto(nawty, from, 'menubrincadeiras', menu, msg)
+        await replyWithFoto(nawty, from, 'menubrincadeiras', menuBrincadeiras(prefix, botName, pushname), msg)
         return
       }
 
@@ -354,7 +253,6 @@ _Alguns comandos só o dono usa_`
       if (command === 'ship') {
         let n1, n2, mentions = []
         const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
-
         if (mentioned.length >= 2) {
           n1 = '@' + mentioned[0].split('@')[0]
           n2 = '@' + mentioned[1].split('@')[0]
@@ -379,7 +277,6 @@ _Alguns comandos só o dono usa_`
           n1 = args[0] || pushname
           n2 = args[1] || 'Alguém'
         }
-
         const pct = Math.floor(Math.random() * 101)
         const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : pct > 20 ? '💔' : '❌'
         const texto = emoji + ' *SHIP*\n\n' + n1 + ' + ' + n2 + '\nCompatibilidade: *' + pct + '%*'
@@ -412,7 +309,6 @@ _Alguns comandos só o dono usa_`
         return
       }
 
-      // ========== TOMP3 / EFEITOS ==========
       if (command === 'tomp3') {
         const media = getQuotedMedia(msg) || getOwnMedia(msg)
         if (!media || (media.type !== 'video' && media.type !== 'audio')) {
@@ -501,7 +397,6 @@ _Alguns comandos só o dono usa_`
         return
       }
 
-      // ========== SETFOTO ==========
       if (command === 'setfoto') {
         const sub = (args[0] || '').toLowerCase()
         if (sub === 'list' || sub === 'lista') {
@@ -549,7 +444,6 @@ _Alguns comandos só o dono usa_`
         return
       }
 
-      // ========== STICKER ==========
       if (['s','sticker','f','fig','figurinha'].includes(command)) {
         try {
           await reagir('⏳')
@@ -632,7 +526,7 @@ _Alguns comandos só o dono usa_`
     }
   })
 
-  GreenLog('✅ Bot pronto! Menus separados ativos.')
+  GreenLog('✅ Bot pronto! Menus estilo Nazuna ativos.')
 }
 
 main()
