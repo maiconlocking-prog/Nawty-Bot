@@ -10,20 +10,22 @@ const {
   buildFunRank,
   loadRanks
 } = require('./groupAdmin.js')
-const { menuRank } = require('./menus.js')
+const { getGroupSec, setGroupSec } = require('./security.js')
 
 const FUN_RANK_CMDS = Object.keys(loadRanks())
+
+function parseOnOff(v) {
+  if (v === '1' || v === 'on' || v === 'ativar') return true
+  if (v === '0' || v === 'off' || v === 'desativar') return false
+  return null
+}
 
 async function handleAdminAndRanks({
   nawty, msg, from, isGroup, sender, pushname, command, args, q, prefix, reply, replyWithFoto, botName
 }) {
-  // menurank
-  if (command === 'menurank') {
-    await replyWithFoto(nawty, from, 'menurank', menuRank(prefix, botName, pushname), msg)
-    return true
-  }
+  const secCmds = ['antilink','antiflood','antipalavra','antidoc','antiloc','seguranca']
+  const needAdmin = ['marcar','hidetag','ban','kick','promover','rebaixar','grupo','linkgp','del','resetativo', ...secCmds]
 
-  const needAdmin = ['marcar','hidetag','ban','kick','promover','rebaixar','grupo','linkgp','del','resetativo']
   if (needAdmin.includes(command)) {
     if (!isGroup) { await reply('❌ Só em grupos.'); return true }
     const adm = await isGroupAdmin(nawty, from, sender)
@@ -34,6 +36,91 @@ async function handleAdminAndRanks({
     }
   }
 
+  // ===== SEGURANÇA =====
+  if (command === 'seguranca') {
+    const s = getGroupSec(from)
+    await reply(
+      '🔒 *Segurança do grupo*\n\n' +
+      'Antilink: ' + (s.antilink ? '✅' : '❌') + '\n' +
+      'Antiflood: ' + (s.antiflood ? '✅' : '❌') + ' (' + (s.floodLimit||5) + ' msgs / ' + (s.floodSeconds||8) + 's)\n' +
+      'Antipalavra: ' + (s.antipalavra ? '✅' : '❌') + '\n' +
+      'Antidoc: ' + (s.antidoc ? '✅' : '❌') + '\n' +
+      'Antiloc: ' + (s.antiloc ? '✅' : '❌')
+    )
+    return true
+  }
+
+  if (command === 'antilink') {
+    const v = parseOnOff((args[0] || '').toLowerCase())
+    if (v === null) return (await reply('Use: ' + prefix + 'antilink 1  ou  ' + prefix + 'antilink 0'), true)
+    setGroupSec(from, { antilink: v })
+    await reply(v ? '✅ Antilink *ativado*' : '❌ Antilink *desativado*')
+    return true
+  }
+
+  if (command === 'antiflood') {
+    const v = parseOnOff((args[0] || '').toLowerCase())
+    if (v === null) return (await reply('Use: ' + prefix + 'antiflood 1  ou  0'), true)
+    setGroupSec(from, { antiflood: v })
+    await reply(v ? '✅ Antiflood *ativado*' : '❌ Antiflood *desativado*')
+    return true
+  }
+
+  if (command === 'antidoc') {
+    const v = parseOnOff((args[0] || '').toLowerCase())
+    if (v === null) return (await reply('Use: ' + prefix + 'antidoc 1/0'), true)
+    setGroupSec(from, { antidoc: v })
+    await reply(v ? '✅ Antidoc *ativado*' : '❌ Antidoc *desativado*')
+    return true
+  }
+
+  if (command === 'antiloc') {
+    const v = parseOnOff((args[0] || '').toLowerCase())
+    if (v === null) return (await reply('Use: ' + prefix + 'antiloc 1/0'), true)
+    setGroupSec(from, { antiloc: v })
+    await reply(v ? '✅ Antiloc *ativado*' : '❌ Antiloc *desativado*')
+    return true
+  }
+
+  if (command === 'antipalavra') {
+    const sub = (args[0] || '').toLowerCase()
+    const s = getGroupSec(from)
+    if (sub === '1' || sub === 'on' || sub === '0' || sub === 'off') {
+      const v = parseOnOff(sub)
+      setGroupSec(from, { antipalavra: v })
+      await reply(v ? '✅ Antipalavra *ativado*' : '❌ Antipalavra *desativado*')
+      return true
+    }
+    if (sub === 'list' || sub === 'lista') {
+      const lista = s.palavras || []
+      await reply(lista.length ? ('📝 Palavras:\n' + lista.map(p => '• ' + p).join('\n')) : 'Lista vazia.')
+      return true
+    }
+    if (sub === 'add' && args[1]) {
+      const p = args.slice(1).join(' ').toLowerCase()
+      const palavras = Array.from(new Set([...(s.palavras || []), p]))
+      setGroupSec(from, { palavras })
+      await reply('✅ Adicionada: *' + p + '*')
+      return true
+    }
+    if ((sub === 'del' || sub === 'rm') && args[1]) {
+      const p = args.slice(1).join(' ').toLowerCase()
+      const palavras = (s.palavras || []).filter(x => x !== p)
+      setGroupSec(from, { palavras })
+      await reply('🗑️ Removida: *' + p + '*')
+      return true
+    }
+    await reply(
+      'Use:\n' +
+      prefix + 'antipalavra 1/0\n' +
+      prefix + 'antipalavra add palavra\n' +
+      prefix + 'antipalavra del palavra\n' +
+      prefix + 'antipalavra list'
+    )
+    return true
+  }
+
+  // ===== GESTÃO =====
   if (command === 'marcar') {
     const members = await getParticipants(nawty, from)
     const texto = q || '📢 Marcação geral'
@@ -156,14 +243,17 @@ async function handleAdminAndRanks({
     return true
   }
 
+  // ranks de brincadeira — funciona com 1 membro
   if (FUN_RANK_CMDS.includes(command)) {
     if (!isGroup) { await reply('❌ Ranks só em grupos.'); return true }
     const ranks = loadRanks()
     const title = ranks[command] || ('🏆 *' + command + '*')
     const members = await getParticipants(nawty, from)
-    const filtered = members.filter(j => j !== nawty.user?.id)
-    if (filtered.length < 3) { await reply('❌ Poucos membros no grupo.'); return true }
-    const chosen = pickRandom(filtered, Math.min(10, filtered.length))
+    let filtered = members.filter(j => j !== nawty.user?.id)
+    if (!filtered.length) filtered = members
+    if (!filtered.length) { await reply('❌ Nenhum membro encontrado.'); return true }
+    const n = Math.min(10, Math.max(1, filtered.length))
+    const chosen = pickRandom(filtered, n)
     const scores = chosen.map(() => Math.floor(Math.random() * 101)).sort((a, b) => b - a)
     const txt = buildFunRank(title, chosen, scores)
     await nawty.sendMessage(from, { text: txt, mentions: chosen }, { quoted: msg })
