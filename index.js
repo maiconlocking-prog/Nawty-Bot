@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menus + admin + ranks
+  Menus + admin + ranks + seguranca
 */
 const fs = require('fs')
 const path = require('path')
@@ -19,6 +19,8 @@ const {
 } = require('./arquivos/js/mediaEffects.js')
 const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd } = require('./arquivos/js/menus.js')
 const { handleAdminAndRanks, registrarAtividade } = require('./arquivos/js/adminHandler.js')
+const { processSecurity } = require('./arquivos/js/security.js')
+const { isGroupAdmin, botIsAdmin } = require('./arquivos/js/groupAdmin.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -129,18 +131,6 @@ function getOwnMedia(msg) {
   if (msg.message.imageMessage) return { msg: msg.message.imageMessage, type: 'image' }
   return null
 }
-const STYLES = {
-  bold: {'a':'a','b':'b','c':'c','d':'d','e':'e','f':'f','g':'g','h':'h','i':'i','j':'j','k':'k','l':'l','m':'m','n':'n','o':'o','p':'p','q':'q','r':'r','s':'s','t':'t','u':'u','v':'v','w':'w','x':'x','y':'y','z':'z'},
-}
-function styleText(text, style) {
-  return text
-}
-function detectCmdFromText(text) {
-  if (!text) return null
-  const re = new RegExp('[' + prefix.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '/!]([a-zA-Z0-9_]+)', 'i')
-  const m = text.match(re)
-  return m ? m[1].toLowerCase() : null
-}
 
 const BRINCADEIRA_CMDS = ['gay','ship','chance','dado','roll','cara','coroa','menubrincadeiras','menubrincadeira']
 const AUDIO_CMDS = Object.keys(audioFilters).concat(['bassbn','bassn','speed','velocidade','cortaraudio','reverse','audioreverso'])
@@ -183,6 +173,14 @@ async function main() {
         ''
 
       if (isGroup && sender) registrarAtividade(from, sender)
+
+      // Segurança (antilink, antiflood, etc) — roda mesmo sem prefixo
+      if (isGroup && sender) {
+        const admUser = await isGroupAdmin(nawty, from, sender)
+        const botAdm = await botIsAdmin(nawty, from)
+        const blocked = await processSecurity(nawty, msg, from, sender, body, admUser, botAdm)
+        if (blocked) return
+      }
 
       if (!body || !body.startsWith(prefix)) return
 
@@ -254,10 +252,16 @@ async function main() {
           mentions = [mentioned[0], mentioned[1]]
         } else if (isGroup && !args[0]) {
           const randoms = await getRandomGroupMembers(nawty, from, 2)
-          if (randoms.length < 2) return reply('Membros insuficientes')
-          n1 = '@' + randoms[0].split('@')[0]
-          n2 = '@' + randoms[1].split('@')[0]
-          mentions = randoms
+          if (randoms.length < 1) return reply('Membros insuficientes')
+          if (randoms.length === 1) {
+            n1 = '@' + randoms[0].split('@')[0]
+            n2 = pushname
+            mentions = [randoms[0]]
+          } else {
+            n1 = '@' + randoms[0].split('@')[0]
+            n2 = '@' + randoms[1].split('@')[0]
+            mentions = randoms
+          }
         } else {
           n1 = args[0] || pushname
           n2 = args[1] || 'Alguem'
@@ -440,7 +444,7 @@ async function main() {
     }
   })
 
-  GreenLog('Bot pronto! Admin + ranks ativos.')
+  GreenLog('Bot pronto! Seguranca + ranks ativos.')
 }
 
 main()
