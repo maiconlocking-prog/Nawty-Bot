@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Menus + admin + ranks + seguranca
+  Personalizacao estilo Nazuna
 */
 const fs = require('fs')
 const path = require('path')
@@ -21,6 +21,19 @@ const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd } = require(
 const { handleAdminAndRanks, registrarAtividade } = require('./arquivos/js/adminHandler.js')
 const { processSecurity } = require('./arquivos/js/security.js')
 const { isGroupAdmin, botIsAdmin } = require('./arquivos/js/groupAdmin.js')
+const {
+  gayReply,
+  shipReply,
+  chanceReply,
+  dadoReply,
+  caraCoroaReply,
+  pingReply,
+  infoReply,
+  donoReply,
+  wrap,
+  ok,
+  fail
+} = require('./arquivos/js/style.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
@@ -149,7 +162,7 @@ async function getRandomGroupMembers(sock, groupJid, count = 2) {
 }
 
 async function main() {
-  console.log(colors.cyan('Iniciando Nawty Bot...'))
+  console.log(colors.cyan('🌸 Iniciando Nawty Bot...'))
   nawty = await startConnection(null, config)
   if (!nawty) return
 
@@ -174,7 +187,6 @@ async function main() {
 
       if (isGroup && sender) registrarAtividade(from, sender)
 
-      // Segurança (antilink, antiflood, etc) — roda mesmo sem prefixo
       if (isGroup && sender) {
         const admUser = await isGroupAdmin(nawty, from, sender)
         const botAdm = await botIsAdmin(nawty, from)
@@ -214,27 +226,27 @@ async function main() {
       if (handled) return
 
       if (command === 'modobrincadeira') {
-        if (!isGroup) return reply('So em grupos.')
+        if (!isGroup) return reply(fail('Só em grupos.'))
         const val = (args[0] || '').trim()
         if (val !== '0' && val !== '1') {
-          const status = isBrincadeiraOn(from) ? 'ATIVADO' : 'DESATIVADO'
-          return reply('Modo Brincadeira\n' + prefix + 'modobrincadeira 1/0\nStatus: ' + status)
+          const status = isBrincadeiraOn(from) ? '✅ ATIVADO' : '❌ DESATIVADO'
+          return reply(wrap('🎮 MODO BRINCADEIRA', 'Use:\n' + prefix + 'modobrincadeira *1*\n' + prefix + 'modobrincadeira *0*\n\nStatus: *' + status + '*'))
         }
         const data = loadBrincadeira()
         if (val === '1') {
           data[from] = true
           saveBrincadeira(data)
-          return reply('Modo Brincadeira ATIVADO')
+          return reply(wrap('🎮 MODO BRINCADEIRA', ok('Modo Brincadeira *ATIVADO*!\nUse ' + prefix + 'menubrincadeiras')))
         } else {
           delete data[from]
           saveBrincadeira(data)
-          return reply('Modo Brincadeira DESATIVADO')
+          return reply(wrap('🎮 MODO BRINCADEIRA', '❌ Modo Brincadeira *DESATIVADO*.'))
         }
       }
 
       if (isGroup && BRINCADEIRA_CMDS.includes(command)) {
         if (!isBrincadeiraOn(from)) {
-          return reply('Brincadeiras desativadas. Use ' + prefix + 'modobrincadeira 1')
+          return reply(wrap('🔒 BLOQUEADO', 'Brincadeiras desativadas.\nAtive com:\n' + prefix + 'modobrincadeira *1*'))
         }
       }
 
@@ -252,7 +264,7 @@ async function main() {
           mentions = [mentioned[0], mentioned[1]]
         } else if (isGroup && !args[0]) {
           const randoms = await getRandomGroupMembers(nawty, from, 2)
-          if (randoms.length < 1) return reply('Membros insuficientes')
+          if (randoms.length < 1) return reply(fail('Membros insuficientes'))
           if (randoms.length === 1) {
             n1 = '@' + randoms[0].split('@')[0]
             n2 = pushname
@@ -264,10 +276,10 @@ async function main() {
           }
         } else {
           n1 = args[0] || pushname
-          n2 = args[1] || 'Alguem'
+          n2 = args[1] || 'Alguém'
         }
         const pct = Math.floor(Math.random() * 101)
-        await replyWithFoto(nawty, from, 'ship', 'SHIP\n' + n1 + ' + ' + n2 + '\n' + pct + '%', msg, mentions)
+        await replyWithFoto(nawty, from, 'ship', shipReply(n1, n2, pct), msg, mentions)
         return
       }
 
@@ -276,39 +288,39 @@ async function main() {
         let mentions = []
         const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
         if (mentioned[0]) { target = '@' + mentioned[0].split('@')[0]; mentions = [mentioned[0]] }
-        await replyWithFoto(nawty, from, 'gay', target + ' e ' + Math.floor(Math.random()*101) + '% gay', msg, mentions)
+        await replyWithFoto(nawty, from, 'gay', gayReply(target, Math.floor(Math.random()*101)), msg, mentions)
         return
       }
       if (command === 'chance') {
-        if (!q) return reply('Use: ' + prefix + 'chance ...')
-        await replyWithFoto(nawty, from, 'chance', q + ' -> ' + Math.floor(Math.random()*101) + '%', msg)
+        if (!q) return reply(wrap('🎯 CHANCE', 'Use: ' + prefix + 'chance <texto>'))
+        await replyWithFoto(nawty, from, 'chance', chanceReply(q, Math.floor(Math.random()*101)), msg)
         return
       }
       if (command === 'dado' || command === 'roll') {
-        await replyWithFoto(nawty, from, 'dado', 'Dado: ' + (Math.floor(Math.random()*6)+1), msg)
+        await replyWithFoto(nawty, from, 'dado', dadoReply(Math.floor(Math.random()*6)+1), msg)
         return
       }
       if (command === 'cara' || command === 'coroa') {
-        await replyWithFoto(nawty, from, 'cara', Math.random() > 0.5 ? 'Cara' : 'Coroa', msg)
+        await replyWithFoto(nawty, from, 'cara', caraCoroaReply(Math.random() > 0.5 ? 'Cara' : 'Coroa'), msg)
         return
       }
 
       if (command === 'tomp3') {
         const media = getQuotedMedia(msg) || getOwnMedia(msg)
-        if (!media || (media.type !== 'video' && media.type !== 'audio')) return reply('Responda video/audio')
+        if (!media || (media.type !== 'video' && media.type !== 'audio')) return reply(fail('Responda um *vídeo* ou *áudio*.'))
         try {
           await reagir('⏳')
           const buf = await getBuffer(media.msg, media.type)
           const mp3 = await toMp3(buf, media.type === 'video')
           await nawty.sendMessage(from, { audio: mp3, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply('Erro tomp3') }
+        } catch (e) { await reply(fail('Erro no tomp3. Instale ffmpeg.')) }
         return
       }
 
       if (AUDIO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || (media.type !== 'audio' && media.type !== 'video')) return reply('Responda um audio')
+        if (!media || (media.type !== 'audio' && media.type !== 'video')) return reply(fail('Responda um *áudio*.'))
         try {
           await reagir('⏳')
           let buf = await getBuffer(media.msg, media.type)
@@ -319,20 +331,20 @@ async function main() {
           const out = await applyAudioEffect(buf, effect, extra)
           await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply('Erro efeito') }
+        } catch (e) { await reply(fail('Erro no efeito de áudio.')) }
         return
       }
 
       if (VIDEO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || media.type !== 'video') return reply('Responda um video')
+        if (!media || media.type !== 'video') return reply(fail('Responda um *vídeo*.'))
         try {
           await reagir('⏳')
           const buf = await getBuffer(media.msg, 'video')
           const out = await applyVideoEffect(buf, command)
-          await nawty.sendMessage(from, { video: out, caption: command }, { quoted: msg })
+          await nawty.sendMessage(from, { video: out, caption: wrap('🎬 EFEITO', command) }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply('Erro video') }
+        } catch (e) { await reply(fail('Erro no efeito de vídeo.')) }
         return
       }
 
@@ -341,22 +353,22 @@ async function main() {
         if (sub === 'list') {
           const fotos = loadFotos()
           const keys = Object.keys(fotos)
-          if (!keys.length) return reply('Nenhuma foto')
-          return reply('Fotos:\n' + keys.map(k => prefix + k).join('\n'))
+          if (!keys.length) return reply(wrap('📸 FOTOS', '_Nenhuma foto configurada._'))
+          return reply(wrap('📸 FOTOS', keys.map(k => '• ' + prefix + k).join('\n')))
         }
         if (['del','delete','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase()
           const fotos = loadFotos()
-          if (!fotos[cmdName]) return reply('Sem foto')
+          if (!fotos[cmdName]) return reply(fail('Sem foto nesse comando.'))
           try { fs.unlinkSync(fotos[cmdName]) } catch {}
           delete fotos[cmdName]
           saveFotos(fotos)
-          return reply('Foto removida')
+          return reply(ok('Foto de *' + prefix + cmdName + '* removida.'))
         }
         let cmdName = (args[0] || '').toLowerCase()
-        if (!cmdName) return reply(prefix + 'setfoto menu')
+        if (!cmdName) return reply(wrap('📸 SETFOTO', prefix + 'setfoto menu\n' + prefix + 'setfoto list\n' + prefix + 'setfoto del menu'))
         let media = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
-        if (!media) return reply('Marque uma imagem')
+        if (!media) return reply(fail('Marque uma *imagem* com o comando.'))
         try {
           const buffer = await getBuffer(media, 'image')
           const filePath = path.join(FOTOS_DIR, cmdName + '.jpg')
@@ -364,8 +376,8 @@ async function main() {
           const fotos = loadFotos()
           fotos[cmdName] = filePath
           saveFotos(fotos)
-          await reply('Foto definida para ' + prefix + cmdName)
-        } catch { await reply('Erro') }
+          await reply(ok('Foto definida para *' + prefix + cmdName + '*'))
+        } catch { await reply(fail('Erro ao salvar a foto.')) }
         return
       }
 
@@ -378,64 +390,64 @@ async function main() {
           else if (quoted?.videoMessage) { media=quoted.videoMessage; isVideo=true }
           else if (msg.message.imageMessage) { media=msg.message.imageMessage }
           else if (msg.message.videoMessage) { media=msg.message.videoMessage; isVideo=true }
-          if (!media) return reply('Responda imagem/video')
+          if (!media) return reply(fail('Responda uma *imagem* ou *vídeo*.'))
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
           webpBuf = await writeExif(webpBuf, config.NomeDoBot||'Nawty', config.NomeDoDono||'Nawty')
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
-        } catch { await reply('Erro figurinha') }
+        } catch { await reply(fail('Erro ao criar figurinha.')) }
         return
       }
 
       if (command === 'toimg') {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply('Responda sticker')
+        if (!quoted?.stickerMessage) return reply(fail('Responda um *sticker*.'))
         try {
           const buf = await getBuffer(quoted.stickerMessage, 'sticker')
-          await nawty.sendMessage(from, { image: buf, caption: 'OK' }, { quoted: msg })
-        } catch { await reply('Erro') }
+          await nawty.sendMessage(from, { image: buf, caption: ok('Convertido!') }, { quoted: msg })
+        } catch { await reply(fail('Erro na conversão.')) }
         return
       }
 
       if (command === 'nick') {
-        if (!q) return reply(prefix + 'nick texto')
-        await replyWithFoto(nawty, from, 'nick', 'Estilos: ' + q, msg)
+        if (!q) return reply(wrap('✨ NICK', 'Use: ' + prefix + 'nick <texto>'))
+        await replyWithFoto(nawty, from, 'nick', wrap('✨ NICK', q), msg)
         return
       }
       if (command === 'calc') {
-        if (!q) return reply(prefix + 'calc 2+2')
+        if (!q) return reply(wrap('🧮 CALC', 'Use: ' + prefix + 'calc 2+2'))
         try {
-          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Invalido')
-          await reply(q + ' = ' + Function('"use strict"; return (' + q + ')')())
-        } catch { await reply('Erro') }
+          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply(fail('Expressão inválida.'))
+          await reply(wrap('🧮 CALC', q + ' = *' + Function('"use strict"; return (' + q + ')')() + '*'))
+        } catch { await reply(fail('Erro no cálculo.')) }
         return
       }
       if (command === 'pp' || command === 'perfil') {
         try {
           let jid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || sender
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
-          if (!pp) return reply('Sem foto')
-          await nawty.sendMessage(from, { image: { url: pp }, caption: 'PP' }, { quoted: msg })
-        } catch { await reply('Erro') }
+          if (!pp) return reply(fail('Sem foto de perfil.'))
+          await nawty.sendMessage(from, { image: { url: pp }, caption: wrap('📸 PERFIL', '@' + jid.split('@')[0]) }, { quoted: msg })
+        } catch { await reply(fail('Erro ao buscar foto.')) }
         return
       }
       if (command === 'say') {
-        if (!q) return reply(prefix + 'say texto')
+        if (!q) return reply(wrap('💬 SAY', 'Use: ' + prefix + 'say <texto>'))
         await nawty.sendMessage(from, { text: q })
         return
       }
       if (command === 'ping') {
         const t = Date.now()
-        await replyWithFoto(nawty, from, 'ping', 'Pong ' + (Date.now()-t) + 'ms', msg)
+        await replyWithFoto(nawty, from, 'ping', pingReply(Date.now()-t), msg)
         return
       }
       if (command === 'dono') {
-        await replyWithFoto(nawty, from, 'dono', config.NomeDoDono + '\n' + config.NumeroDoDono, msg)
+        await replyWithFoto(nawty, from, 'dono', donoReply(config.NomeDoDono, config.NumeroDoDono), msg)
         return
       }
       if (command === 'info') {
-        await replyWithFoto(nawty, from, 'info', config.NomeDoBot + '\nPrefixo: ' + prefix, msg)
+        await replyWithFoto(nawty, from, 'info', infoReply(config.NomeDoBot, prefix), msg)
         return
       }
 
@@ -444,7 +456,7 @@ async function main() {
     }
   })
 
-  GreenLog('Bot pronto! Seguranca + ranks ativos.')
+  GreenLog('✅ Nawty pronta — estilo Nazuna ativo!')
 }
 
 main()
