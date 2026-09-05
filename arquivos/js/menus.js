@@ -96,26 +96,65 @@ function menuBrincadeiras(prefix, botName, userName) {
 function menuDono(prefix, botName, userName) {
   return (
     header(botName, userName, '👑') + '\n\n' +
-    section('👑 DONO / CRIADOR', [
-      prefix + 'criador',
-      prefix + 'dono / ' + prefix + 'info',
-      prefix + 'backup',
-      prefix + 'setfoto <cmd> | list | del',
-      prefix + 'semprefixo list/add/del',
-      prefix + 'modobrincadeira 1/0'
-    ], '👑') + '\n\n' +
-    section('💎 VIP', [
-      prefix + 'addvip @user [dias]',
-      prefix + 'delvip @user',
-      prefix + 'listvip'
+    section('🤖 CONFIGURAÇÕES DO BOT', [
+      prefix + 'prefixo <novo>',
+      prefix + 'numerodono <número>',
+      prefix + 'nomedono <nome>',
+      prefix + 'nomebot <nome>',
+      prefix + 'fotobot  (marque imagem)',
+      prefix + 'msgprefix'
+    ], '🤖') + '\n\n' +
+    section('👥 GERENCIAMENTO DE USUÁRIOS', [
+      prefix + 'blockuserg @',
+      prefix + 'unblockuserg @',
+      prefix + 'listblocks',
+      prefix + 'addblackglobal @',
+      prefix + 'rmblackglobal @',
+      prefix + 'listblackglobal'
+    ], '👥') + '\n\n' +
+    section('🚫 GRUPOS', [
+      prefix + 'bangp',
+      prefix + 'unbangp',
+      prefix + 'listbangp',
+      prefix + 'listagp',
+      prefix + 'entrar <link>',
+      prefix + 'sairgp',
+      prefix + 'nuke confirmar'
+    ], '🚫') + '\n\n' +
+    section('📡 TRANSMISSÕES', [
+      prefix + 'tm <mensagem>',
+      prefix + 'divulgar <mensagem>'
+    ], '📡') + '\n\n' +
+    section('💎 VIP / PREMIUM', [
+      prefix + 'addvip @ [dias]',
+      prefix + 'delvip @',
+      prefix + 'listvip',
+      prefix + 'addpremium @ [dias]',
+      prefix + 'delpremium @',
+      prefix + 'listprem'
     ], '💎') + '\n\n' +
     section('💰 ECONOMIA RPG', [
-      prefix + 'addcoins @user <valor>',
-      prefix + 'delcoins @user <valor>',
-      prefix + 'setcoins @user <valor>',
+      prefix + 'addcoins @ <valor>',
+      prefix + 'delcoins @ <valor>',
+      prefix + 'setcoins @ <valor>',
       prefix + 'sorteio <valor>',
-      prefix + 'resetrpg @user'
-    ], '💰')
+      prefix + 'resetrpg @'
+    ], '💰') + '\n\n' +
+    section('⚡ SEM PREFIXO', [
+      prefix + 'addnopref S s',
+      prefix + 'delnopref S',
+      prefix + 'listnopref',
+      prefix + 'semprefixo list'
+    ], '⚡') + '\n\n' +
+    section('🛠️ MANUTENÇÃO', [
+      prefix + 'reiniciar',
+      prefix + 'backup',
+      prefix + 'limpardb confirmar',
+      prefix + 'limparrankg',
+      prefix + 'seradm / ' + prefix + 'sermembro',
+      prefix + 'setfoto <cmd>',
+      prefix + 'criador'
+    ], '🛠️')
   )
 }
 
