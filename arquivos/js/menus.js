@@ -55,10 +55,12 @@ function menuAdm(prefix, botName, userName) {
       prefix + 'antilink 1/0',
       prefix + 'antiflood 1/0',
       prefix + 'antipalavra 1/0',
-      prefix + 'antipalavra add/del/list',
+      prefix + 'antipalavra add <palavra>',
+      prefix + 'antipalavra del <palavra>',
+      prefix + 'antipalavra list',
       prefix + 'antidoc 1/0',
       prefix + 'antiloc 1/0',
-      prefix + 'seguranca'
+      prefix + 'seguranca  (status)'
     ]) + '\n\n' +
     section('📊 ATIVIDADE', [
       prefix + 'rankativo',
@@ -79,9 +81,16 @@ function menuBrincadeiras(prefix, botName, userName) {
     ]) + '\n\n' +
     section('🏆 RANKS', [
       prefix + 'rankativo',
-      prefix + 'rankgay / rankcorno / rankgado',
-      prefix + 'rankgostoso / ranklindo',
-      prefix + 'rankengracado / rankfofoqueiro'
+      prefix + 'rankgay',
+      prefix + 'rankcorno',
+      prefix + 'rankgado',
+      prefix + 'rankgostoso / ' + prefix + 'rankgostosa',
+      prefix + 'ranklindo / ' + prefix + 'ranklinda',
+      prefix + 'rankengracado',
+      prefix + 'rankfofoqueiro',
+      prefix + 'rankburro / ' + prefix + 'rankinteligente',
+      prefix + 'rankrico / ' + prefix + 'rankpobre',
+      prefix + 'rankromantico / ' + prefix + 'rankciumento'
     ]) + '\n\n' +
     section('⚡ ATIVAÇÃO', [
       prefix + 'modobrincadeira 1',
@@ -98,7 +107,8 @@ function menuDono(prefix, botName, userName) {
       prefix + 'dono',
       prefix + 'info',
       prefix + 'setfoto <comando>',
-      prefix + 'setfoto list / del',
+      prefix + 'setfoto list',
+      prefix + 'setfoto del <comando>',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -110,9 +120,9 @@ function menuCmd(prefix, botName, userName) {
     section('🎨 FIGURINHAS', [
       prefix + 's / ' + prefix + 'sticker',
       prefix + 'toimg',
-      prefix + 'rgtake Pack/Autor',
-      prefix + 'rtake Pack/Autor',
-      prefix + 'take  (responde figurinha)'
+      prefix + 'rgtake Nome/Autor',
+      prefix + 'rtake Nome/Autor',
+      prefix + 'take  (responde a figurinha)'
     ]) + '\n\n' +
     section('🎬 MÍDIA', [
       prefix + 'tomp3',
