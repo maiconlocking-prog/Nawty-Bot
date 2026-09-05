@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Owner/Criador unificado + claimowner (LID)
+  Dono = NumeroDoDono no config.json
 */
 const fs = require('fs')
 const path = require('path')
@@ -34,20 +34,20 @@ const {
   ok,
   fail
 } = require('./arquivos/js/style.js')
-const { enviarCriador, isComandoProtegido, isCriador } = require('./arquivos/js/criador.js')
+const { isComandoProtegido } = require('./arquivos/js/criador.js')
 const { handleRpg } = require('./arquivos/js/rpg.js')
 const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('./arquivos/js/take.js')
 const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 const { startAutosave, backupAll } = require('./arquivos/js/autosave.js')
 const { handleDono, isBlocked, isGroupBanned } = require('./arquivos/js/donoHandler.js')
-const { isOwnerOrCriador } = require('./arquivos/js/ownerCheck.js')
+const { isOwnerAsync, loadConfig, resolveSenderJid } = require('./arquivos/js/ownerCheck.js')
 
 const config = JSON.parse(fs.readFileSync('./database/config.json'))
 const startConnection = require('./conexao.js')
 const { GreenLog } = require('./arquivos/js/logger.js')
 
 let nawty = null
-const prefix = config.prefix || '¥'
+let prefix = config.prefix || '¥'
 const FOTOS_PATH = path.join(__dirname, 'database/fotos.json')
 const FOTOS_DIR = path.join(__dirname, 'database/fotos')
 const BRINCADEIRA_PATH = path.join(__dirname, 'database/brincadeira.json')
@@ -187,10 +187,16 @@ async function main() {
       const msg = messages[0]
       if (!msg?.message) return
 
+      try {
+        const live = loadConfig()
+        if (live && typeof live === 'object') Object.assign(config, live)
+      } catch {}
+
       const from = msg.key.remoteJid
       const isGroup = from.endsWith('@g.us')
-      const sender = msg.key.participant || from
+      const sender = resolveSenderJid(msg, msg.key.participant || from)
       const pushname = msg.pushName || 'Usuario'
+      prefix = config.prefix || prefix || '¥'
       const botName = config.NomeDoBot || 'Nawty'
 
       let body =
@@ -227,60 +233,11 @@ async function main() {
       const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
 
-      const isOwner = isOwnerOrCriador(sender, config, msg)
+      const isOwner = await isOwnerAsync(nawty, sender, config, msg)
 
       if (!isOwner) {
         if (isBlocked(sender)) return
         if (isGroup && isGroupBanned(from)) return
-      }
-
-      if (command === 'meuid' || command === 'myid') {
-        const { collectSenderCandidates, onlyDigits } = require('./arquivos/js/criador.js')
-        const { loadOwnerJids } = require('./arquivos/js/ownerCheck.js')
-        const cands = collectSenderCandidates(sender, msg)
-        const digs = [...new Set(cands.map(onlyDigits).filter(d => d && d.length >= 8))]
-        const raw = []
-        if (msg.key) {
-          raw.push('participant: ' + (msg.key.participant || '—'))
-          raw.push('participantAlt: ' + (msg.key.participantAlt || '—'))
-          raw.push('remoteJid: ' + (msg.key.remoteJid || '—'))
-          raw.push('remoteJidAlt: ' + (msg.key.remoteJidAlt || '—'))
-        }
-        await reply(
-          '🆔 *SEU ID*\n\n' +
-          'Sender: `' + String(sender) + '`\n' +
-          'Números:\n' + (digs.length ? digs.map(d => '• `' + d + '`').join('\n') : '• _(não detectado — use ¥claimowner)_') + '\n\n' +
-          'Raw:\n' + raw.map(x => '• ' + x).join('\n') + '\n\n' +
-          'Dono/Criador? *' + (isOwner ? 'SIM ✅' : 'NÃO ❌') + '*\n' +
-          'Registrados: *' + loadOwnerJids().length + '*\n\n' +
-          'Se NÃO, use no *privado do bot*:\n' +
-          '`' + prefix + 'claimowner nawty2026`'
-        )
-        return
-      }
-
-      if (command === 'claimowner' || command === 'soucriador' || command === 'autorizarcriador') {
-        const { getOwnerPin, registerOwnerFromMessage, isOwnerOrCriador: checkOwn } = require('./arquivos/js/ownerCheck.js')
-        const pin = getOwnerPin(config)
-        const tried = (args[0] || q || '').trim()
-        if (!tried) {
-          await reply('🔐 Use: *' + prefix + 'claimowner ' + pin + '*\n_(recomendado no chat privado com o bot)_')
-          return
-        }
-        if (tried !== pin) {
-          await reply('❌ PIN incorreto.')
-          return
-        }
-        const list = registerOwnerFromMessage(sender, msg)
-        const okNow = checkOwn(sender, config, msg)
-        await reply(
-          '✅ *Autorizado como DONO/CRIADOR!*\n\n' +
-          'JID salvo: `' + String(sender) + '`\n' +
-          'Total registros: *' + list.length + '*\n' +
-          'Status agora: *' + (okNow ? 'SIM ✅' : 'NÃO (reinicie o bot)') + '*\n\n' +
-          'Teste: *' + prefix + 'menudono*'
-        )
-        return
       }
 
       if (['menu','help','ajuda'].includes(command)) {
@@ -308,14 +265,8 @@ async function main() {
         return
       }
 
-      if (['criador','creator','creditos','créditos'].includes(command)) {
-        await reagir('👑')
-        await enviarCriador(nawty, from, msg, config)
-        return
-      }
-
       if (command === 'backup') {
-        if (!isOwner) return reply('❌ Só o dono/criador.')
+        if (!isOwner) return reply('❌ Só o dono.')
         const r = backupAll('manual')
         return reply(ok('Backup salvo!\nArquivos: *' + r.count + '*'))
       }
@@ -588,7 +539,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — claimowner ativo!')
+  GreenLog('✅ Nawty pronta — dono via config!')
 }
 
 main()
