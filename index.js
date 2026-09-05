@@ -157,7 +157,6 @@ async function getRandomGroupMembers(sock, groupJid, count = 2) {
     const participants = (meta.participants || [])
       .map(p => p.id)
       .filter(id => id && !id.includes('status') && id !== sock.user?.id)
-    // embaralha
     for (let i = participants.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[participants[i], participants[j]] = [participants[j], participants[i]]
@@ -205,7 +204,9 @@ async function main() {
         if (!isGroup) return reply('❌ Este comando só funciona em *grupos*.')
         const val = (args[0] || '').trim()
         if (val !== '0' && val !== '1') {
-          return reply(`🎮 *Modo Brincadeira*\n\nUse:\n${prefix}modobrincadeira 1 → ativar\n${prefix}modobrincadeira 0 → desativar\n\nStatus atual: *${isBrincadeiraOn(from) ? 'ATIVADO ✅' : 'DESATIVADO ❌'}*`)\n        }
+          const status = isBrincadeiraOn(from) ? 'ATIVADO ✅' : 'DESATIVADO ❌'
+          return reply('🎮 *Modo Brincadeira*\n\nUse:\n' + prefix + 'modobrincadeira 1 → ativar\n' + prefix + 'modobrincadeira 0 → desativar\n\nStatus atual: *' + status + '*')
+        }
         const data = loadBrincadeira()
         if (val === '1') {
           data[from] = true
@@ -219,58 +220,54 @@ async function main() {
       }
 
       // Bloqueia comandos de brincadeira se estiver off no grupo
-      if (isGroup && BRINCADEIRA_CMDS.includes(command) && command !== 'modobrincadeira') {
+      if (isGroup && BRINCADEIRA_CMDS.includes(command)) {
         if (!isBrincadeiraOn(from)) {
-          return reply(`🔒 Comandos de brincadeira estão *desativados* neste grupo.\n\nUm admin pode ativar com:\n${prefix}modobrincadeira 1`)
+          return reply('🔒 Comandos de brincadeira estão *desativados* neste grupo.\n\nAtive com:\n' + prefix + 'modobrincadeira 1')
         }
       }
 
       // ========== MENU BRINCADEIRAS ==========
       if (command === 'menubrincadeiras' || command === 'menubrincadeira') {
-        const menu = `╭🎮───────────────🎮╮
-   *MENU BRINCADEIRAS*
-╰🎮───────────────🎮╯
-
-${prefix}gay @ ou nome
-${prefix}ship  (2 pessoas aleatórias no grupo)
-${prefix}ship @ @  (ou mencione/nome)
-${prefix}chance <texto>
-${prefix}dado
-${prefix}cara
-
-⚙️ Ativar/Desativar:\n${prefix}modobrincadeira 1
-${prefix}modobrincadeira 0`
+        const menu = '╭🎮───────────────🎮╮\n   *MENU BRINCADEIRAS*\n╰🎮───────────────🎮╯\n\n' +
+          prefix + 'gay @ ou nome\n' +
+          prefix + 'ship  (2 pessoas aleatórias no grupo)\n' +
+          prefix + 'ship @ @  (ou mencione/nome)\n' +
+          prefix + 'chance <texto>\n' +
+          prefix + 'dado\n' +
+          prefix + 'cara\n\n' +
+          '⚙️ Ativar/Desativar:\n' +
+          prefix + 'modobrincadeira 1\n' +
+          prefix + 'modobrincadeira 0'
         await replyWithFoto(nawty, from, 'menubrincadeiras', menu, msg)
         return
       }
 
-      // ========== SHIP (aleatório no grupo) ==========
+      // ========== SHIP ==========
       if (command === 'ship') {
         let n1, n2, mentions = []
         const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
 
         if (mentioned.length >= 2) {
-          n1 = `@${mentioned[0].split('@')[0]}`
-          n2 = `@${mentioned[1].split('@')[0]}`
+          n1 = '@' + mentioned[0].split('@')[0]
+          n2 = '@' + mentioned[1].split('@')[0]
           mentions = [mentioned[0], mentioned[1]]
         } else if (mentioned.length === 1) {
-          n1 = `@${mentioned[0].split('@')[0]}`
+          n1 = '@' + mentioned[0].split('@')[0]
           mentions = [mentioned[0]]
           if (isGroup) {
             const randoms = await getRandomGroupMembers(nawty, from, 1)
             if (randoms[0]) {
-              n2 = `@${randoms[0].split('@')[0]}`
+              n2 = '@' + randoms[0].split('@')[0]
               mentions.push(randoms[0])
             } else n2 = args[0] || 'Alguém'
           } else n2 = args[0] || 'Alguém'
         } else if (isGroup && !args[0]) {
-          // duas pessoas aleatórias do grupo
           const randoms = await getRandomGroupMembers(nawty, from, 2)
           if (randoms.length < 2) {
             return reply('❌ Não há membros suficientes no grupo para o ship.')
           }
-          n1 = `@${randoms[0].split('@')[0]}`
-          n2 = `@${randoms[1].split('@')[0]}`
+          n1 = '@' + randoms[0].split('@')[0]
+          n2 = '@' + randoms[1].split('@')[0]
           mentions = randoms
         } else {
           n1 = args[0] || pushname
@@ -279,7 +276,7 @@ ${prefix}modobrincadeira 0`
 
         const pct = Math.floor(Math.random() * 101)
         const emoji = pct > 80 ? '💘' : pct > 50 ? '❤️' : pct > 20 ? '💔' : '❌'
-        const texto = `${emoji} *SHIP*\n\n${n1} + ${n2}\nCompatibilidade: *${pct}%*`
+        const texto = emoji + ' *SHIP*\n\n' + n1 + ' + ' + n2 + '\nCompatibilidade: *' + pct + '%*'
         await replyWithFoto(nawty, from, 'ship', texto, msg, mentions)
         return
       }
@@ -290,25 +287,25 @@ ${prefix}modobrincadeira 0`
         let mentions = []
         const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
         if (mentioned[0]) {
-          target = `@${mentioned[0].split('@')[0]}`
+          target = '@' + mentioned[0].split('@')[0]
           mentions = [mentioned[0]]
         }
-        const texto = `🏳️‍🌈 *${target}* é *${Math.floor(Math.random()*101)}%* gay`
+        const texto = '🏳️‍🌈 *' + target + '* é *' + Math.floor(Math.random()*101) + '%* gay'
         await replyWithFoto(nawty, from, 'gay', texto, msg, mentions)
         return
       }
 
       if (command === 'chance') {
-        if (!q) return reply(`Use: ${prefix}chance de eu ficar rico`)
-        await replyWithFoto(nawty, from, 'chance', `🎯 A chance de *${q}* é de *${Math.floor(Math.random()*101)}%*`, msg)
+        if (!q) return reply('Use: ' + prefix + 'chance de eu ficar rico')
+        await replyWithFoto(nawty, from, 'chance', '🎯 A chance de *' + q + '* é de *' + Math.floor(Math.random()*101) + '%*', msg)
         return
       }
       if (command === 'dado' || command === 'roll') {
-        await replyWithFoto(nawty, from, 'dado', `🎲 Você tirou: *${Math.floor(Math.random()*6)+1}*`, msg)
+        await replyWithFoto(nawty, from, 'dado', '🎲 Você tirou: *' + (Math.floor(Math.random()*6)+1) + '*', msg)
         return
       }
       if (command === 'cara' || command === 'coroa') {
-        await replyWithFoto(nawty, from, 'cara', `🪙 Resultado: *${Math.random() > 0.5 ? 'Cara' : 'Coroa'}*`, msg)
+        await replyWithFoto(nawty, from, 'cara', '🪙 Resultado: *' + (Math.random() > 0.5 ? 'Cara' : 'Coroa') + '*', msg)
         return
       }
 
@@ -316,7 +313,7 @@ ${prefix}modobrincadeira 0`
       if (command === 'tomp3') {
         const media = getQuotedMedia(msg) || getOwnMedia(msg)
         if (!media || (media.type !== 'video' && media.type !== 'audio')) {
-          return reply(`❌ Responda um *vídeo* ou *áudio* com ${prefix}tomp3`)
+          return reply('❌ Responda um *vídeo* ou *áudio* com ' + prefix + 'tomp3')
         }
         try {
           await reagir('⏳')
@@ -333,7 +330,7 @@ ${prefix}modobrincadeira 0`
       }
 
       if (command === 'cortaraudio') {
-        if (args.length < 2) return reply(`Use: ${prefix}cortaraudio <inicio> <fim>`)
+        if (args.length < 2) return reply('Use: ' + prefix + 'cortaraudio <inicio> <fim>')
         const media = getQuotedMedia(msg)
         if (!media || media.type !== 'audio') return reply('❌ Responda um *áudio*')
         try {
@@ -347,7 +344,7 @@ ${prefix}modobrincadeira 0`
       }
 
       if (command === 'cortarvideo') {
-        if (args.length < 2) return reply(`Use: ${prefix}cortarvideo <inicio> <fim>`)
+        if (args.length < 2) return reply('Use: ' + prefix + 'cortarvideo <inicio> <fim>')
         const media = getQuotedMedia(msg)
         if (!media || media.type !== 'video') return reply('❌ Responda um *vídeo*')
         try {
@@ -363,7 +360,7 @@ ${prefix}modobrincadeira 0`
       if (AUDIO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
         if (!media || (media.type !== 'audio' && media.type !== 'video')) {
-          return reply(`❌ Responda um *áudio* com ${prefix}${command}`)
+          return reply('❌ Responda um *áudio* com ' + prefix + command)
         }
         try {
           await reagir('⏳')
@@ -387,12 +384,12 @@ ${prefix}modobrincadeira 0`
 
       if (VIDEO_CMDS.includes(command)) {
         const media = getQuotedMedia(msg)
-        if (!media || media.type !== 'video') return reply(`❌ Responda um *vídeo* com ${prefix}${command}`)
+        if (!media || media.type !== 'video') return reply('❌ Responda um *vídeo* com ' + prefix + command)
         try {
           await reagir('⏳')
           const buf = await getBuffer(media.msg, 'video')
           const out = await applyVideoEffect(buf, command)
-          await nawty.sendMessage(from, { video: out, caption: `🎬 ${command}` }, { quoted: msg })
+          await nawty.sendMessage(from, { video: out, caption: '🎬 ' + command }, { quoted: msg })
           await reagir('✅')
         } catch (e) {
           console.error(e)
@@ -410,18 +407,18 @@ ${prefix}modobrincadeira 0`
           const keys = Object.keys(fotos)
           if (!keys.length) return reply('Nenhuma foto configurada.')
           let txt = '📸 *Fotos:*\n\n'
-          keys.forEach(k => txt += `• ${prefix}${k}\n`)
+          keys.forEach(k => txt += '• ' + prefix + k + '\n')
           return reply(txt)
         }
         if (['del','delete','remover','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase().replace(prefix, '')
-          if (!cmdName) return reply(`Use: ${prefix}setfoto del menu`)
+          if (!cmdName) return reply('Use: ' + prefix + 'setfoto del menu')
           const fotos = loadFotos()
-          if (!fotos[cmdName]) return reply(`Nenhuma foto em *${cmdName}*`)
+          if (!fotos[cmdName]) return reply('Nenhuma foto em *' + cmdName + '*')
           try { if (fs.existsSync(fotos[cmdName])) fs.unlinkSync(fotos[cmdName]) } catch {}
           delete fotos[cmdName]
           saveFotos(fotos)
-          return reply(`🗑️ Foto de *${prefix}${cmdName}* removida.`)
+          return reply('🗑️ Foto de *' + prefix + cmdName + '* removida.')
         }
         let cmdName = (args[0] || '').toLowerCase().replace(prefix, '').trim()
         if (!cmdName) {
@@ -429,22 +426,22 @@ ${prefix}modobrincadeira 0`
           const qt = quoted?.conversation || quoted?.extendedTextMessage?.text || ''
           cmdName = detectCmdFromText(qt) || ''
         }
-        if (!cmdName) return reply(`📸 ${prefix}setfoto menu | list | del menu`)
+        if (!cmdName) return reply('📸 ' + prefix + 'setfoto menu | list | del menu')
         let media = null
         if (msg.message.imageMessage) media = msg.message.imageMessage
         else if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
           media = msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage
         }
-        if (!media) return reply(`❌ Marque uma imagem com ${prefix}setfoto ${cmdName}`)
+        if (!media) return reply('❌ Marque uma imagem com ' + prefix + 'setfoto ' + cmdName)
         try {
           await reagir('⏳')
           const buffer = await getBuffer(media, 'image')
-          const filePath = path.join(FOTOS_DIR, `${cmdName}.jpg`)
+          const filePath = path.join(FOTOS_DIR, cmdName + '.jpg')
           fs.writeFileSync(filePath, buffer)
           const fotos = loadFotos()
           fotos[cmdName] = filePath
           saveFotos(fotos)
-          await reply(`✅ Foto definida para *${prefix}${cmdName}*`)
+          await reply('✅ Foto definida para *' + prefix + cmdName + '*')
           await reagir('✅')
         } catch { await reply('❌ Erro ao salvar a foto.') }
         return
@@ -452,32 +449,7 @@ ${prefix}modobrincadeira 0`
 
       // ========== MENU PRINCIPAL ==========
       if (['menu','help','ajuda'].includes(command)) {
-        const menu = `╭🌸───────────────🌸╮
-       *NAWTY BOT*
-╰🌸───────────────🌸╯
-
-👤 ${pushname}
-🔰 Prefixo: *${prefix}*
-
-╭─『 FIGURINHAS 』
-│ ${prefix}s  ${prefix}toimg
-╰──────────────
-
-╭─『 MÍDIA 』
-│ ${prefix}tomp3
-│ ${prefix}cortaraudio / ${prefix}cortarvideo
-│ efeitos: ${prefix}bass ${prefix}videorapido...
-╰──────────────
-
-╭─『 BRINCADEIRAS 』
-│ ${prefix}modobrincadeira 1/0
-│ ${prefix}menubrincadeiras
-╰──────────────
-
-╭─『 OUTROS 』
-│ ${prefix}nick ${prefix}calc ${prefix}ping
-│ ${prefix}setfoto ${prefix}info ${prefix}dono
-╰──────────────`
+        const menu = '╭🌸───────────────🌸╮\n       *NAWTY BOT*\n╰🌸───────────────🌸╯\n\n👤 ' + pushname + '\n🔰 Prefixo: *' + prefix + '*\n\n╭─『 FIGURINHAS 』\n│ ' + prefix + 's  ' + prefix + 'toimg\n╰──────────────\n\n╭─『 MÍDIA 』\n│ ' + prefix + 'tomp3\n│ ' + prefix + 'cortaraudio / ' + prefix + 'cortarvideo\n│ efeitos: ' + prefix + 'bass ' + prefix + 'videorapido...\n╰──────────────\n\n╭─『 BRINCADEIRAS 』\n│ ' + prefix + 'modobrincadeira 1/0\n│ ' + prefix + 'menubrincadeiras\n╰──────────────\n\n╭─『 OUTROS 』\n│ ' + prefix + 'nick ' + prefix + 'calc ' + prefix + 'ping\n│ ' + prefix + 'setfoto ' + prefix + 'info ' + prefix + 'dono\n╰──────────────'
         await replyWithFoto(nawty, from, 'menu', menu, msg)
         return
       }
@@ -493,7 +465,7 @@ ${prefix}modobrincadeira 0`
           else if (quoted?.stickerMessage) { media=quoted.stickerMessage; isVideo=false }
           else if (msg.message.imageMessage) { media=msg.message.imageMessage; isVideo=false }
           else if (msg.message.videoMessage) { media=msg.message.videoMessage; isVideo=true }
-          if (!media) return reply(`❌ Responda imagem/vídeo com ${prefix}s`)
+          if (!media) return reply('❌ Responda imagem/vídeo com ' + prefix + 's')
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
           webpBuf = await writeExif(webpBuf, config.NomeDoBot||'Nawty', config.NomeDoDono||'Nawty')
@@ -505,7 +477,7 @@ ${prefix}modobrincadeira 0`
 
       if (command === 'toimg') {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply(`Responda sticker com ${prefix}toimg`)
+        if (!quoted?.stickerMessage) return reply('Responda sticker com ' + prefix + 'toimg')
         await reagir('⏳')
         try {
           const buf = await getBuffer(quoted.stickerMessage, 'sticker')
@@ -516,18 +488,18 @@ ${prefix}modobrincadeira 0`
       }
 
       if (command === 'nick' || command === 'estilo') {
-        if (!q) return reply(`Use: ${prefix}nick texto`)
-        let txt = `✨ *Estilos:* ${q}\n\n`
-        for (const name of Object.keys(STYLES)) txt += `*${name}*: ${styleText(q, name)}\n`
+        if (!q) return reply('Use: ' + prefix + 'nick texto')
+        let txt = '✨ *Estilos:* ' + q + '\n\n'
+        for (const name of Object.keys(STYLES)) txt += '*' + name + '*: ' + styleText(q, name) + '\n'
         await replyWithFoto(nawty, from, 'nick', txt, msg)
         return
       }
 
       if (command === 'calc') {
-        if (!q) return reply(`Use: ${prefix}calc 2+2`)
+        if (!q) return reply('Use: ' + prefix + 'calc 2+2')
         try {
           if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply('Inválido')
-          await reply(`🧮 ${q} = *${Function(`"use strict"; return (${q})`)()}*`)
+          await reply('🧮 ' + q + ' = *' + Function('"use strict"; return (' + q + ')')() + '*')
         } catch { await reply('Erro') }
         return
       }
@@ -542,21 +514,21 @@ ${prefix}modobrincadeira 0`
         return
       }
       if (command === 'say') {
-        if (!q) return reply(`Use: ${prefix}say texto`)
+        if (!q) return reply('Use: ' + prefix + 'say texto')
         await nawty.sendMessage(from, { text: q })
         return
       }
       if (command === 'ping') {
         const t = Date.now()
-        await replyWithFoto(nawty, from, 'ping', `🏓 ${Date.now()-t}ms`, msg)
+        await replyWithFoto(nawty, from, 'ping', '🏓 ' + (Date.now()-t) + 'ms', msg)
         return
       }
       if (command === 'dono') {
-        await replyWithFoto(nawty, from, 'dono', `👑 ${config.NomeDoDono}\n${config.NumeroDoDono}`, msg)
+        await replyWithFoto(nawty, from, 'dono', '👑 ' + config.NomeDoDono + '\n' + config.NumeroDoDono, msg)
         return
       }
       if (command === 'info') {
-        await replyWithFoto(nawty, from, 'info', `🤖 ${config.NomeDoBot}\nPrefixo: ${prefix}\nOnline ✅`, msg)
+        await replyWithFoto(nawty, from, 'info', '🤖 ' + config.NomeDoBot + '\nPrefixo: ' + prefix + '\nOnline ✅', msg)
         return
       }
 
