@@ -55,12 +55,10 @@ function menuAdm(prefix, botName, userName) {
       prefix + 'antilink 1/0',
       prefix + 'antiflood 1/0',
       prefix + 'antipalavra 1/0',
-      prefix + 'antipalavra add <palavra>',
-      prefix + 'antipalavra del <palavra>',
-      prefix + 'antipalavra list',
+      prefix + 'antipalavra add/del/list',
       prefix + 'antidoc 1/0',
       prefix + 'antiloc 1/0',
-      prefix + 'seguranca  (status)'
+      prefix + 'seguranca'
     ]) + '\n\n' +
     section('📊 ATIVIDADE', [
       prefix + 'rankativo',
@@ -81,16 +79,9 @@ function menuBrincadeiras(prefix, botName, userName) {
     ]) + '\n\n' +
     section('🏆 RANKS', [
       prefix + 'rankativo',
-      prefix + 'rankgay',
-      prefix + 'rankcorno',
-      prefix + 'rankgado',
-      prefix + 'rankgostoso / ' + prefix + 'rankgostosa',
-      prefix + 'ranklindo / ' + prefix + 'ranklinda',
-      prefix + 'rankengracado',
-      prefix + 'rankfofoqueiro',
-      prefix + 'rankburro / ' + prefix + 'rankinteligente',
-      prefix + 'rankrico / ' + prefix + 'rankpobre',
-      prefix + 'rankromantico / ' + prefix + 'rankciumento'
+      prefix + 'rankgay / rankcorno / rankgado',
+      prefix + 'rankgostoso / ranklindo',
+      prefix + 'rankengracado / rankfofoqueiro'
     ]) + '\n\n' +
     section('⚡ ATIVAÇÃO', [
       prefix + 'modobrincadeira 1',
@@ -107,8 +98,7 @@ function menuDono(prefix, botName, userName) {
       prefix + 'dono',
       prefix + 'info',
       prefix + 'setfoto <comando>',
-      prefix + 'setfoto list',
-      prefix + 'setfoto del <comando>',
+      prefix + 'setfoto list / del',
       prefix + 'modobrincadeira 1/0'
     ])
   )
@@ -119,7 +109,10 @@ function menuCmd(prefix, botName, userName) {
     header(botName, userName) + '\n\n' +
     section('🎨 FIGURINHAS', [
       prefix + 's / ' + prefix + 'sticker',
-      prefix + 'toimg'
+      prefix + 'toimg',
+      prefix + 'rgtake Pack/Autor',
+      prefix + 'rtake Pack/Autor',
+      prefix + 'take  (responde figurinha)'
     ]) + '\n\n' +
     section('🎬 MÍDIA', [
       prefix + 'tomp3',
