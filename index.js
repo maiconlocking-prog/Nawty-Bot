@@ -1,6 +1,6 @@
 /*
   NAWTY BOT - Baileys 7
-  Nazuna style + criador + take + sem prefixo
+  Menus organizados + RPG/VIP + take + sem prefixo
 */
 const fs = require('fs')
 const path = require('path')
@@ -17,7 +17,7 @@ const {
   audioFilters,
   videoFilters
 } = require('./arquivos/js/mediaEffects.js')
-const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd } = require('./arquivos/js/menus.js')
+const { menuPrincipal, menuAdm, menuBrincadeiras, menuDono, menuCmd, menuRpg, menuVip } = require('./arquivos/js/menus.js')
 const { handleAdminAndRanks, registrarAtividade } = require('./arquivos/js/adminHandler.js')
 const { processSecurity } = require('./arquivos/js/security.js')
 const { isGroupAdmin, botIsAdmin } = require('./arquivos/js/groupAdmin.js')
@@ -34,7 +34,8 @@ const {
   ok,
   fail
 } = require('./arquivos/js/style.js')
-const { enviarCriador, isComandoProtegido } = require('./arquivos/js/criador.js')
+const { enviarCriador, isComandoProtegido, isCriador } = require('./arquivos/js/criador.js')
+const { handleRpg } = require('./arquivos/js/rpg.js')
 const { parseTakeText, getUserTake, setUserTake, writeStickerExif } = require('./arquivos/js/take.js')
 const { resolveSemPrefixo, addAlias, delAlias, listAliases } = require('./arquivos/js/semprefixo.js')
 
@@ -218,6 +219,10 @@ async function main() {
       const reply = async (t, mentions=[]) => nawty.sendMessage(from, { text: t, mentions }, { quoted: msg })
       const reagir = async (e) => { try { await nawty.sendMessage(from, { react: { text: e, key: msg.key } }) } catch {} }
 
+      const numDono = String(config.NumeroDoDono || '').replace(/\D/g, '')
+      const senderNum = String(sender || '').split('@')[0].split(':')[0].replace(/\D/g, '')
+      const isOwner = isCriador(sender) || (numDono && (senderNum === numDono || senderNum.endsWith(numDono) || numDono.endsWith(senderNum)))
+
       if (['menu','help','ajuda'].includes(command)) {
         await replyWithFoto(nawty, from, 'menu', menuPrincipal(prefix, botName, pushname), msg)
         return
@@ -234,6 +239,14 @@ async function main() {
         await replyWithFoto(nawty, from, 'menucmd', menuCmd(prefix, botName, pushname), msg)
         return
       }
+      if (command === 'menurpg' || command === 'rpg') {
+        await replyWithFoto(nawty, from, 'menurpg', menuRpg(prefix, botName, pushname), msg)
+        return
+      }
+      if (command === 'menuvip' || command === 'vipmenu') {
+        await replyWithFoto(nawty, from, 'menuvip', menuVip(prefix, botName, pushname), msg)
+        return
+      }
 
       if (['criador','creator','creditos','créditos'].includes(command)) {
         await reagir('👑')
@@ -246,6 +259,12 @@ async function main() {
       })
       if (handled) return
 
+      const rpgHandled = await handleRpg({
+        command, args, q, sender, pushname, from, isGroup, msg,
+        prefix, reply, sock: nawty, isOwner
+      })
+      if (rpgHandled) return
+
       if (command === 'modobrincadeira') {
         if (!isGroup) return reply(fail('Só em grupos.'))
         const val = (args[0] || '').trim()
@@ -257,17 +276,17 @@ async function main() {
         if (val === '1') {
           data[from] = true
           saveBrincadeira(data)
-          return reply(wrap('🎮 MODO BRINCADEIRA', ok('Modo Brincadeira *ATIVADO*!\nUse ' + prefix + 'menubrincadeiras')))
+          return reply(wrap('🎮 MODO BRINCADEIRA', ok('Modo Brincadeira *ATIVADO*!')))
         } else {
           delete data[from]
           saveBrincadeira(data)
-          return reply(wrap('🎮 MODO BRINCADEIRA', '❌ Modo Brincadeira *DESATIVADO*.'))
+          return reply(wrap('🎮 MODO BRINCADEIRA', '❌ Desativado.'))
         }
       }
 
       if (isGroup && BRINCADEIRA_CMDS.includes(command)) {
         if (!isBrincadeiraOn(from)) {
-          return reply(wrap('🔒 BLOQUEADO', 'Brincadeiras desativadas.\nAtive com:\n' + prefix + 'modobrincadeira *1*'))
+          return reply(wrap('🔒 BLOQUEADO', 'Ative: ' + prefix + 'modobrincadeira *1*'))
         }
       }
 
@@ -287,26 +306,19 @@ async function main() {
           const randoms = await getRandomGroupMembers(nawty, from, 2)
           if (randoms.length < 1) return reply(fail('Membros insuficientes'))
           if (randoms.length === 1) {
-            n1 = '@' + randoms[0].split('@')[0]
-            n2 = pushname
-            mentions = [randoms[0]]
+            n1 = '@' + randoms[0].split('@')[0]; n2 = pushname; mentions = [randoms[0]]
           } else {
-            n1 = '@' + randoms[0].split('@')[0]
-            n2 = '@' + randoms[1].split('@')[0]
-            mentions = randoms
+            n1 = '@' + randoms[0].split('@')[0]; n2 = '@' + randoms[1].split('@')[0]; mentions = randoms
           }
         } else {
-          n1 = args[0] || pushname
-          n2 = args[1] || 'Alguém'
+          n1 = args[0] || pushname; n2 = args[1] || 'Alguém'
         }
-        const pct = Math.floor(Math.random() * 101)
-        await replyWithFoto(nawty, from, 'ship', shipReply(n1, n2, pct), msg, mentions)
+        await replyWithFoto(nawty, from, 'ship', shipReply(n1, n2, Math.floor(Math.random()*101)), msg, mentions)
         return
       }
 
       if (command === 'gay') {
-        let target = q || pushname
-        let mentions = []
+        let target = q || pushname, mentions = []
         const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || []
         if (mentioned[0]) { target = '@' + mentioned[0].split('@')[0]; mentions = [mentioned[0]] }
         await replyWithFoto(nawty, from, 'gay', gayReply(target, Math.floor(Math.random()*101)), msg, mentions)
@@ -335,7 +347,7 @@ async function main() {
           const mp3 = await toMp3(buf, media.type === 'video')
           await nawty.sendMessage(from, { audio: mp3, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply(fail('Erro no tomp3.')) }
+        } catch { await reply(fail('Erro no tomp3.')) }
         return
       }
 
@@ -352,7 +364,7 @@ async function main() {
           const out = await applyAudioEffect(buf, effect, extra)
           await nawty.sendMessage(from, { audio: out, mimetype: 'audio/mpeg' }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply(fail('Erro no efeito de áudio.')) }
+        } catch { await reply(fail('Erro no efeito de áudio.')) }
         return
       }
 
@@ -365,86 +377,58 @@ async function main() {
           const out = await applyVideoEffect(buf, command)
           await nawty.sendMessage(from, { video: out, caption: wrap('🎬 EFEITO', command) }, { quoted: msg })
           await reagir('✅')
-        } catch (e) { await reply(fail('Erro no efeito de vídeo.')) }
+        } catch { await reply(fail('Erro no efeito de vídeo.')) }
         return
       }
 
       if (command === 'rgtake') {
         const parsed = parseTakeText(q)
-        if (!parsed) {
-          return reply(wrap('📝 RGTAKE', 'Use:\n' + prefix + 'rgtake *Nome/Autor*\nEx: ' + prefix + 'rgtake Maicon/oi'))
-        }
+        if (!parsed) return reply(wrap('📝 RGTAKE', 'Use: ' + prefix + 'rgtake *Nome/Autor*'))
         setUserTake(sender, parsed.pack, parsed.author)
-        return reply(wrap('✅ RGTAKE', 'Pack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*\n\nResponda uma figurinha com *take* ou ' + prefix + 'take'))
+        return reply(wrap('✅ RGTAKE', 'Pack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*'))
       }
-
       if (command === 'rtake') {
-        const atual = getUserTake(sender)
         const parsed = parseTakeText(q)
-        if (!parsed) {
-          const info = atual ? ('Atual: *' + atual.pack + '/' + atual.author + '*\n\n') : ''
-          return reply(wrap('✏️ RTAKE', info + 'Use: ' + prefix + 'rtake *Nome/Autor*'))
-        }
+        if (!parsed) return reply(wrap('✏️ RTAKE', 'Use: ' + prefix + 'rtake *Nome/Autor*'))
         setUserTake(sender, parsed.pack, parsed.author)
         return reply(wrap('✅ RTAKE', 'Pack: *' + parsed.pack + '*\nAutor: *' + parsed.author + '*'))
       }
-
       if (command === 'take') {
         const reg = getUserTake(sender)
-        if (!reg) {
-          return reply(wrap('🎨 TAKE', 'Registre antes:\n' + prefix + 'rgtake *Nome/Autor*\nDepois responda a figurinha com *T* ou ' + prefix + 'take'))
-        }
+        if (!reg) return reply(wrap('🎨 TAKE', 'Registre: ' + prefix + 'rgtake *Nome/Autor*'))
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        const st = quoted?.stickerMessage
-        if (!st) return reply(fail('Responda uma *figurinha* com take'))
+        if (!quoted?.stickerMessage) return reply(fail('Responda uma *figurinha*.'))
         try {
           await reagir('⏳')
-          const buf = await getBuffer(st, 'sticker')
+          const buf = await getBuffer(quoted.stickerMessage, 'sticker')
           const out = await writeStickerExif(buf, reg.pack, reg.author)
           await nawty.sendMessage(from, { sticker: out }, { quoted: msg })
           await reagir('✅')
-        } catch (e) {
-          console.error(e)
-          await reply(fail('Erro ao renomear a figurinha.'))
-        }
+        } catch { await reply(fail('Erro no take.')) }
         return
       }
 
-      // SEM PREFIXO — gerenciar atalhos
       if (command === 'semprefixo' || command === 'atalho' || command === 'alias') {
         const sub = (args[0] || '').toLowerCase()
         if (sub === 'list' || sub === 'lista' || !sub) {
           const map = listAliases()
           const keys = Object.keys(map)
           if (!keys.length) return reply(wrap('⚡ SEM PREFIXO', '_Nenhum atalho._'))
-          let txt = 'Atalhos ativos:\n\n'
+          let txt = 'Atalhos:\n\n'
           keys.forEach(k => { txt += '• *' + k.toUpperCase() + '* → ' + prefix + map[k] + '\n' })
-          txt += '\nAdd: ' + prefix + 'semprefixo add S s\nDel: ' + prefix + 'semprefixo del S'
           return reply(wrap('⚡ SEM PREFIXO', txt))
         }
         if (sub === 'add') {
-          const alias = args[1]
-          const cmd = args[2]
-          if (!alias || !cmd) {
-            return reply(wrap('⚡ SEM PREFIXO', 'Use:\n' + prefix + 'semprefixo add *S* *s*\nEx:\n' + prefix + 'semprefixo add T take'))
-          }
-          const r = addAlias(alias, cmd)
-          if (!r.ok) return reply(fail(r.msg))
-          return reply(ok('Atalho *' + r.alias.toUpperCase() + '* → ' + prefix + r.command))
+          if (!args[1] || !args[2]) return reply('Use: ' + prefix + 'semprefixo add S s')
+          const r = addAlias(args[1], args[2])
+          return reply(r.ok ? ok('*' + r.alias.toUpperCase() + '* → ' + prefix + r.command) : fail(r.msg))
         }
-        if (sub === 'del' || sub === 'rm' || sub === 'delete') {
-          const alias = args[1]
-          if (!alias) return reply(fail('Use: ' + prefix + 'semprefixo del S'))
-          const r = delAlias(alias)
-          if (!r.ok) return reply(fail(r.msg))
-          return reply(ok('Atalho *' + r.alias.toUpperCase() + '* removido.'))
+        if (['del','rm','delete'].includes(sub)) {
+          if (!args[1]) return reply('Use: ' + prefix + 'semprefixo del S')
+          const r = delAlias(args[1])
+          return reply(r.ok ? ok('Removido *' + r.alias.toUpperCase() + '*') : fail(r.msg))
         }
-        return reply(wrap('⚡ SEM PREFIXO', [
-          prefix + 'semprefixo list',
-          prefix + 'semprefixo add S s',
-          prefix + 'semprefixo add T take',
-          prefix + 'semprefixo del S'
-        ].join('\n')))
+        return reply(wrap('⚡ SEM PREFIXO', prefix + 'semprefixo list/add/del'))
       }
 
       if (command === 'setfoto') {
@@ -452,33 +436,30 @@ async function main() {
         if (sub === 'list') {
           const fotos = loadFotos()
           const keys = Object.keys(fotos)
-          if (!keys.length) return reply(wrap('📸 FOTOS', '_Nenhuma foto configurada._'))
+          if (!keys.length) return reply(wrap('📸 FOTOS', '_Nenhuma._'))
           return reply(wrap('📸 FOTOS', keys.map(k => '• ' + prefix + k).join('\n')))
         }
         if (['del','delete','rm'].includes(sub)) {
           const cmdName = (args[1] || '').toLowerCase()
-          if (isComandoProtegido(cmdName)) return reply(fail('Comando *protegido*.'))
+          if (isComandoProtegido(cmdName)) return reply(fail('Protegido.'))
           const fotos = loadFotos()
-          if (!fotos[cmdName]) return reply(fail('Sem foto nesse comando.'))
+          if (!fotos[cmdName]) return reply(fail('Sem foto.'))
           try { fs.unlinkSync(fotos[cmdName]) } catch {}
-          delete fotos[cmdName]
-          saveFotos(fotos)
+          delete fotos[cmdName]; saveFotos(fotos)
           return reply(ok('Foto removida.'))
         }
         let cmdName = (args[0] || '').toLowerCase()
         if (!cmdName) return reply(wrap('📸 SETFOTO', prefix + 'setfoto menu'))
-        if (isComandoProtegido(cmdName)) return reply(fail('Comando protegido.'))
+        if (isComandoProtegido(cmdName)) return reply(fail('Protegido.'))
         let media = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
         if (!media) return reply(fail('Marque uma *imagem*.'))
         try {
           const buffer = await getBuffer(media, 'image')
           const filePath = path.join(FOTOS_DIR, cmdName + '.jpg')
           fs.writeFileSync(filePath, buffer)
-          const fotos = loadFotos()
-          fotos[cmdName] = filePath
-          saveFotos(fotos)
-          await reply(ok('Foto definida para *' + prefix + cmdName + '*'))
-        } catch { await reply(fail('Erro ao salvar.')) }
+          const fotos = loadFotos(); fotos[cmdName] = filePath; saveFotos(fotos)
+          await reply(ok('Foto em *' + prefix + cmdName + '*'))
+        } catch { await reply(fail('Erro.')) }
         return
       }
 
@@ -487,57 +468,55 @@ async function main() {
           await reagir('⏳')
           let media=null, isVideo=false
           const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-          if (quoted?.imageMessage) { media=quoted.imageMessage }
+          if (quoted?.imageMessage) media=quoted.imageMessage
           else if (quoted?.videoMessage) { media=quoted.videoMessage; isVideo=true }
-          else if (msg.message.imageMessage) { media=msg.message.imageMessage }
+          else if (msg.message.imageMessage) media=msg.message.imageMessage
           else if (msg.message.videoMessage) { media=msg.message.videoMessage; isVideo=true }
-          if (!media) return reply(fail('Responda uma *imagem* ou *vídeo*.'))
+          if (!media) return reply(fail('Responda imagem/vídeo.'))
           const buffer = await getBuffer(media, isVideo?'video':'image')
           let webpBuf = await convertToWebp(buffer, isVideo)
           const reg = getUserTake(sender)
-          const pack = reg?.pack || config.NomeDoBot || 'Nawty'
-          const author = reg?.author || config.NomeDoDono || 'Nawty'
-          webpBuf = await writeExif(webpBuf, pack, author)
+          webpBuf = await writeExif(webpBuf, reg?.pack || config.NomeDoBot || 'Nawty', reg?.author || config.NomeDoDono || 'Nawty')
           await nawty.sendMessage(from, { sticker: webpBuf }, { quoted: msg })
           await reagir('✅')
-        } catch { await reply(fail('Erro ao criar figurinha.')) }
+        } catch { await reply(fail('Erro na figurinha.')) }
         return
       }
 
       if (command === 'toimg') {
         const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-        if (!quoted?.stickerMessage) return reply(fail('Responda um *sticker*.'))
+        if (!quoted?.stickerMessage) return reply(fail('Responda um sticker.'))
         try {
           const buf = await getBuffer(quoted.stickerMessage, 'sticker')
           await nawty.sendMessage(from, { image: buf, caption: ok('Convertido!') }, { quoted: msg })
-        } catch { await reply(fail('Erro na conversão.')) }
+        } catch { await reply(fail('Erro.')) }
         return
       }
 
       if (command === 'nick') {
-        if (!q) return reply(wrap('✨ NICK', 'Use: ' + prefix + 'nick <texto>'))
+        if (!q) return reply(wrap('✨ NICK', prefix + 'nick <texto>'))
         await replyWithFoto(nawty, from, 'nick', wrap('✨ NICK', q), msg)
         return
       }
       if (command === 'calc') {
-        if (!q) return reply(wrap('🧮 CALC', 'Use: ' + prefix + 'calc 2+2'))
+        if (!q) return reply(wrap('🧮 CALC', prefix + 'calc 2+2'))
         try {
-          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply(fail('Expressão inválida.'))
+          if (!/^[0-9+\-*/().%\s]+$/.test(q)) return reply(fail('Inválido.'))
           await reply(wrap('🧮 CALC', q + ' = *' + Function('"use strict"; return (' + q + ')')() + '*'))
-        } catch { await reply(fail('Erro no cálculo.')) }
+        } catch { await reply(fail('Erro.')) }
         return
       }
       if (command === 'pp' || command === 'perfil') {
         try {
           let jid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0] || sender
           const pp = await nawty.profilePictureUrl(jid, 'image').catch(()=>null)
-          if (!pp) return reply(fail('Sem foto de perfil.'))
+          if (!pp) return reply(fail('Sem foto.'))
           await nawty.sendMessage(from, { image: { url: pp }, caption: wrap('📸 PERFIL', '@' + jid.split('@')[0]) }, { quoted: msg })
-        } catch { await reply(fail('Erro ao buscar foto.')) }
+        } catch { await reply(fail('Erro.')) }
         return
       }
       if (command === 'say') {
-        if (!q) return reply(wrap('💬 SAY', 'Use: ' + prefix + 'say <texto>'))
+        if (!q) return reply(wrap('💬 SAY', prefix + 'say <texto>'))
         await nawty.sendMessage(from, { text: q })
         return
       }
@@ -560,7 +539,7 @@ async function main() {
     }
   })
 
-  GreenLog('✅ Nawty pronta — sem prefixo ativo!')
+  GreenLog('✅ Nawty pronta — RPG/VIP ativo!')
 }
 
 main()
