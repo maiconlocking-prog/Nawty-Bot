@@ -1,68 +1,63 @@
 /**
- * Comando CRIADOR — inalterável
- * Marca original protegida (não usa setfoto)
+ * Comando CRIADOR — protegido / ofuscado
+ * Não altera via setfoto nem menus.
  */
-const fs = require('fs')
-const path = require('path')
-const { wrap } = require('./style.js')
 
-// ===== MARCA ORIGINAL (não editar via comandos do bot) =====
-const CRIADOR_FIXO = {
-  nomeMarca: 'Nawty Bot',
-  creditoBase: 'Base adaptada e personalizada',
-  estilo: 'Nazuna-inspired',
-  versao: 'V1',
-  // texto institucional fixo
-  texto: [
-    '👑 *CRIADOR / DONO*',
-    '',
-    'Bot: *NAWTY BOT*',
-    'Marca original protegida ✅',
-    'Estilo visual: *Nazuna*',
-    '',
-    'Este comando é *inalterável*.',
-    'Não aceita setfoto nem edição por menu.'
-  ].join('\n')
+// strings protegidas (base64) — dificulta edição casual
+const _b = (s) => Buffer.from(s, 'base64').toString('utf8')
+
+const _N1 = _b('TmF3dHlW')           // NawtyV (fallback ASCII)
+const _N2 = _b('TmF3dHktQm90')       // Nawty-Bot
+const _CMD = ['criador', 'creator', 'creditos', 'créditos']
+
+// marca estilizada (Unicode)
+const MARCA = {
+  criadorFancy: '𝕹𝖆𝖜𝖙𝖞𝖁',
+  botFancy: '𝑵𝒂𝒘𝒕𝒚-𝑩𝒐𝒕',
+  criadorLabel: '𝕮𝖗𝖎𝖆𝖉𝖔𝖗'
+}
+
+function isComandoProtegido(cmd) {
+  return _CMD.includes(String(cmd || '').toLowerCase())
 }
 
 function buildCaption(config) {
-  const dono = config.NomeDoDono || 'Dono'
+  const donoCfg = config.NomeDoDono || MARCA.criadorFancy
   const num = String(config.NumeroDoDono || '').replace(/\D/g, '')
-  const linhas = [
+  return [
     '╭┈⊰ 🌸 『 *CRIADOR* 』',
     '┊',
-    '┊👑 Dono: *' + dono + '*',
+    '┊' + MARCA.criadorLabel + ': *' + MARCA.criadorFancy + '*',
+    '┊' + MARCA.botFancy,
+    '┊',
+    '┊🤖 Bot: *' + (config.NomeDoBot || _N2) + '*',
+    '┊👤 Config dono: *' + donoCfg + '*',
     num ? ('┊📱 wa.me/' + num) : null,
-    '┊🤖 Bot: *' + (config.NomeDoBot || 'NAWTY BOT') + '*',
     '┊🛡️ Marca original: *protegida*',
-    '┊🎨 Estilo: *Nazuna*',
+    '┊🔐 Comando: *inalterável*',
     '┊📦 Doc: *999 GB* (metadado)',
     '┊',
-    '┊_Comando inalterável — crédito do criador_',
+    '┊_Crédito fixo do criador — não editável_',
     '╰─┈┈┈┈┈◜❁◞┈┈┈┈┈─╯'
-  ].filter(Boolean)
-  return linhas.join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 /**
- * Envia documento falso com fileLength enorme + legenda do criador.
- * O arquivo real é minúsculo; o WhatsApp só exibe o tamanho dos metadados.
+ * Documento falso 999GB + legenda do criador
  */
 async function enviarCriador(sock, from, msg, config) {
   const caption = buildCaption(config)
-  const fakeBytes = 999 * 1024 * 1024 * 1024 // 999 GB em metadado
+  const fakeBytes = 999 * 1024 * 1024 * 1024
   const content = Buffer.from(
-    'NAWTY BOT — Documento simbólico do criador.\n' +
-    'Este arquivo é propositalmente pequeno.\n' +
-    'O tamanho exibido (999GB) é apenas metadado de apresentação.\n'
+    _N2 + ' — ' + MARCA.criadorFancy + '\n' +
+    'Documento simbólico do criador.\n' +
+    'Tamanho 999GB é apenas metadado.\n'
   )
 
-  // tenta via proto Baileys (fileLength falso)
   try {
     const baileys = await import('@whiskeysockets/baileys')
-    const { generateWAMessageFromContent, proto, prepareWAMessageMedia } = baileys
+    const { generateWAMessageFromContent, prepareWAMessageMedia } = baileys
 
-    // upload real minúsculo + sobrescreve fileLength na mensagem
     const media = await prepareWAMessageMedia(
       { document: content },
       { upload: sock.waUploadToServer }
@@ -70,9 +65,9 @@ async function enviarCriador(sock, from, msg, config) {
 
     if (media.documentMessage) {
       media.documentMessage.fileLength = fakeBytes
-      media.documentMessage.fileName = 'CRIADOR-NAWTY-999GB.pdf'
+      media.documentMessage.fileName = 'CRIADOR-NAWTYV-999GB.pdf'
       media.documentMessage.mimetype = 'application/pdf'
-      media.documentMessage.title = 'CRIADOR NAWTY'
+      media.documentMessage.title = MARCA.criadorFancy + ' | ' + MARCA.botFancy
     }
 
     const waMsg = generateWAMessageFromContent(
@@ -88,13 +83,12 @@ async function enviarCriador(sock, from, msg, config) {
 
     await sock.relayMessage(from, waMsg.message, { messageId: waMsg.key.id })
     return true
-  } catch (e) {
-    // fallback simples
+  } catch {
     try {
       await sock.sendMessage(from, {
         document: content,
         mimetype: 'application/pdf',
-        fileName: 'CRIADOR-NAWTY-999GB.pdf',
+        fileName: 'CRIADOR-NAWTYV-999GB.pdf',
         caption
       }, { quoted: msg })
       return true
@@ -105,13 +99,8 @@ async function enviarCriador(sock, from, msg, config) {
   }
 }
 
-/** Bloqueia setfoto no comando criador */
-function isComandoProtegido(cmd) {
-  return ['criador', 'creator', 'creditos', 'créditos'].includes(String(cmd || '').toLowerCase())
-}
-
 module.exports = {
-  CRIADOR_FIXO,
+  MARCA,
   buildCaption,
   enviarCriador,
   isComandoProtegido
